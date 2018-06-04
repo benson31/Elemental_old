@@ -66,7 +66,7 @@ void RowAllToAllPromote
                   B.ColAlign(), rowStrideUnion,
                   A.LockedBuffer(), A.LDim(),
                   firstBuf,         portionSize );
-
+            EL_CHECK_CUDA(cudaStreamSynchronize(GPUManager::Stream()));
             time_elapsed = clock.Stop();
             MPI_Reduce(A.Grid().Comm().Rank() == 0 ? MPI_IN_PLACE : &time_elapsed,
                        &time_elapsed, 1, mpi::TypeMap<T>(),
@@ -80,7 +80,7 @@ void RowAllToAllPromote
             mpi::AllToAll
             ( firstBuf,  portionSize,
               secondBuf, portionSize, A.PartialUnionRowComm() );
-
+            EL_CHECK_CUDA(cudaStreamSynchronize(GPUManager::Stream()));
             time_elapsed = clock.Stop();
             MPI_Reduce(A.Grid().Comm().Rank() == 0 ? MPI_IN_PLACE : &time_elapsed,
                        &time_elapsed, 1, mpi::TypeMap<T>(),
@@ -97,7 +97,7 @@ void RowAllToAllPromote
               B.RowShift(),
               secondBuf, portionSize,
               B.Buffer(), B.LDim() );
-
+            EL_CHECK_CUDA(cudaStreamSynchronize(GPUManager::Stream()));
             time_elapsed = clock.Stop();
             MPI_Reduce(A.Grid().Comm().Rank() == 0 ? MPI_IN_PLACE : &time_elapsed,
                        &time_elapsed, 1, mpi::TypeMap<T>(),

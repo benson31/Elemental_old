@@ -74,7 +74,7 @@ void Exchange_impl
         ( localHeightA, localWidthA,
           A.LockedBuffer(), 1, A.LDim(),
           buf.data(),       1, localHeightA );
-
+        EL_CHECK_CUDA(cudaStreamSynchronize(GPUManager::Stream()));
         time_elapsed = clock.Stop();
         OutputFromRoot(A.Grid().Comm(),
                        "  InterleaveMatrix: ", time_elapsed, "s");
@@ -113,7 +113,7 @@ void Exchange_impl
         ( localHeightB, localWidthB,
           buf.data(), 1, localHeightB,
           B.Buffer(), 1, B.LDim() );
-
+        EL_CHECK_CUDA(cudaStreamSynchronize(GPUManager::Stream()));
         time_elapsed = clock.Stop();
         OutputFromRoot(A.Grid().Comm(),
                        "  InterleaveMatrix: ", time_elapsed, "s");
@@ -129,7 +129,7 @@ void Exchange_impl
         ( localHeightA, localWidthA,
           A.LockedBuffer(), 1, A.LDim(),
           sendBuf.data(),   1, localHeightA );
-
+        EL_CHECK_CUDA(cudaStreamSynchronize(GPUManager::Stream()));
         time_elapsed = clock.Stop();
         OutputFromRoot(A.Grid().Comm(),
                        "  InterleaveMatrix: ", time_elapsed, "s");
@@ -152,7 +152,7 @@ void Exchange_impl
         ( localHeightB, localWidthB,
           recvBuf.data(), 1, localHeightB,
           B.Buffer(),     1, B.LDim() );
-
+        EL_CHECK_CUDA(cudaStreamSynchronize(GPUManager::Stream()));
         time_elapsed = clock.Stop();
         OutputFromRoot(A.Grid().Comm(),
                        "  InterleaveMatrix: ", time_elapsed, "s");
