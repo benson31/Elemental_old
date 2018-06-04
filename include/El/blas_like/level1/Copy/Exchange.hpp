@@ -21,7 +21,6 @@ void Exchange_impl
     EL_DEBUG_CSE
     EL_DEBUG_ONLY(AssertSameGrids( A, B ))
 
-
     const int myRank = mpi::Rank( comm );
     EL_DEBUG_ONLY(
       if( myRank == sendRank && myRank != recvRank )
@@ -46,60 +45,117 @@ void Exchange_impl
     const bool contigA = ( A.LocalHeight() == A.LDim() );
     const bool contigB = ( B.LocalHeight() == B.LDim() );
 
+    // DEBUG
+    Timer clock;
+    double time_elapsed;
+
     if( contigA && contigB )
     {
+        OutputFromRoot(A.Grid().Comm(),
+                       "Exchange (Contig A, Contig B)");
+        clock.Start();
         mpi::SendRecv
         ( A.LockedBuffer(), sendSize, sendRank,
           B.Buffer(),       recvSize, recvRank, comm );
+
+        time_elapsed = clock.Stop();
+        OutputFromRoot(A.Grid().Comm(),
+                       "  SendRecv: ", time_elapsed, "s");
     }
     else if( contigB )
     {
+        OutputFromRoot(A.Grid().Comm(),
+                       "Exchange (Non-Contig A, Contig B)");
         // Pack A's data
         simple_buffer<T,D> buf(sendSize);
+
+        clock.Start();
         copy::util::InterleaveMatrix<T,D>
         ( localHeightA, localWidthA,
           A.LockedBuffer(), 1, A.LDim(),
           buf.data(),       1, localHeightA );
 
+        time_elapsed = clock.Stop();
+        OutputFromRoot(A.Grid().Comm(),
+                       "  InterleaveMatrix: ", time_elapsed, "s");
+
         // Exchange with the partner
+        clock.Reset();
+        clock.Start();
         mpi::SendRecv
         ( buf.data(), sendSize, sendRank,
           B.Buffer(), recvSize, recvRank, comm );
+
+        time_elapsed = clock.Stop();
+        OutputFromRoot(A.Grid().Comm(),
+                       "          SendRecv: ", time_elapsed, "s");
     }
     else if( contigA )
     {
+        OutputFromRoot(A.Grid().Comm(),
+                       "Exchange (Contig A, Non-Contig B)");
         // Exchange with the partner
         simple_buffer<T,D> buf(recvSize);
+
+        clock.Start();
         mpi::SendRecv
         ( A.LockedBuffer(), sendSize, sendRank,
           buf.data(),       recvSize, recvRank, comm );
 
+        time_elapsed = clock.Stop();
+        OutputFromRoot(A.Grid().Comm(),
+                       "          SendRecv: ", time_elapsed, "s");
+
         // Unpack
+        clock.Reset();
+        clock.Start();
         copy::util::InterleaveMatrix<T,D>
         ( localHeightB, localWidthB,
           buf.data(), 1, localHeightB,
           B.Buffer(), 1, B.LDim() );
+
+        time_elapsed = clock.Stop();
+        OutputFromRoot(A.Grid().Comm(),
+                       "  InterleaveMatrix: ", time_elapsed, "s");
     }
     else
     {
+        OutputFromRoot(A.Grid().Comm(),
+                       "Exchange (Non-Contig A, Non-Contig B)");
         // Pack A's data
-        simple_buffer<T,D> sendBuf(sendSize);
+        simple_buffer<T,D> sendBuf(sendSize), recvBuf(recvSize);
+        clock.Start();
         copy::util::InterleaveMatrix<T,D>
         ( localHeightA, localWidthA,
           A.LockedBuffer(), 1, A.LDim(),
           sendBuf.data(),   1, localHeightA );
 
+        time_elapsed = clock.Stop();
+        OutputFromRoot(A.Grid().Comm(),
+                       "  InterleaveMatrix: ", time_elapsed, "s");
+
         // Exchange with the partner
-        simple_buffer<T,D> recvBuf(recvSize);
+        clock.Reset();
+        clock.Start();
         mpi::SendRecv
         ( sendBuf.data(), sendSize, sendRank,
           recvBuf.data(), recvSize, recvRank, comm );
 
+        time_elapsed = clock.Stop();
+        OutputFromRoot(A.Grid().Comm(),
+                       "          SendRecv: ", time_elapsed, "s");
+
         // Unpack
+        clock.Reset();
+        clock.Start();
         copy::util::InterleaveMatrix<T,D>
         ( localHeightB, localWidthB,
           recvBuf.data(), 1, localHeightB,
           B.Buffer(),     1, B.LDim() );
+
+        time_elapsed = clock.Stop();
+        OutputFromRoot(A.Grid().Comm(),
+                       "  InterleaveMatrix: ", time_elapsed, "s");
     }
 }
 
@@ -168,6 +224,10 @@ void RowwiseVectorExchange
     if( !B.Participating() )
         return;
 
+    Timer clock;
+
+    OutputFromRoot(A.Grid().Comm(), "RowwiseVectorExchange");
+
     const Int distSize = A.DistSize();
     const Int rowDiff = A.RowShift() - B.RowShift();
     const Int sendRankB = Mod( B.DistRank()+rowDiff, distSize );
@@ -175,7 +235,11 @@ void RowwiseVectorExchange
     const Int recvRankB =
       (recvRankA/A.PartialRowStride())+
       (recvRankA%A.PartialRowStride())*A.PartialUnionRowStride();
+
+    clock.Start();
     copy::Exchange_impl<T,D>( A, B, sendRankB, recvRankB, B.DistComm() );
+    OutputFromRoot(A.Grid().Comm(),
+                   "  Exchange_impl: ", clock.Stop(), "s");
 }
 
 } // namespace copy

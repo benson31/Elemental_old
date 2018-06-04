@@ -4,6 +4,7 @@ set_full_path(THIS_DIR_SOURCES
   Constants.cpp
   DifferentGrids.cpp
   #DistMatrix.cpp
+  DistMatrixCopyProfile.cpp
   Matrix.cpp
   Pow.cpp
   QDToInt.cpp

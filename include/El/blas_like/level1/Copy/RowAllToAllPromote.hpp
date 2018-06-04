@@ -48,23 +48,48 @@ void RowAllToAllPromote
         }
         else
         {
+            OutputFromRoot(A.Grid().Comm(), "RowAllToAllPromote: AllToAll path");
+
             simple_buffer<T,D> buffer(2*rowStrideUnion*portionSize);
             T* firstBuf  = buffer.data();
             T* secondBuf = buffer.data() + rowStrideUnion*portionSize;
 
             // Pack
+
+            // DEBUG
+            Timer clock;
+            double time_elapsed;
+
+            clock.Start();
             util::ColStridedPack<T,D>
-            ( height, A.LocalWidth(),
-              B.ColAlign(), rowStrideUnion,
-              A.LockedBuffer(), A.LDim(),
-              firstBuf,         portionSize );
+                ( height, A.LocalWidth(),
+                  B.ColAlign(), rowStrideUnion,
+                  A.LockedBuffer(), A.LDim(),
+                  firstBuf,         portionSize );
+
+            time_elapsed = clock.Stop();
+            MPI_Reduce(A.Grid().Comm().Rank() == 0 ? MPI_IN_PLACE : &time_elapsed,
+                       &time_elapsed, 1, mpi::TypeMap<T>(),
+                       MPI_MAX, 0, A.Grid().Comm().comm);
+            OutputFromRoot(A.Grid().Comm(),
+                           "           ColStridedPack: ", time_elapsed, "s");
 
             // Simultaneously Gather in rows and Scatter in columns
+            clock.Reset();
+            clock.Start();
             mpi::AllToAll
             ( firstBuf,  portionSize,
               secondBuf, portionSize, A.PartialUnionRowComm() );
 
+            time_elapsed = clock.Stop();
+            MPI_Reduce(A.Grid().Comm().Rank() == 0 ? MPI_IN_PLACE : &time_elapsed,
+                       &time_elapsed, 1, mpi::TypeMap<T>(),
+                       MPI_MAX, 0, A.Grid().Comm().comm);
+            OutputFromRoot(A.Grid().Comm(),
+                           "                 AllToAll: ", time_elapsed, "s");
             // Unpack
+            clock.Reset();
+            clock.Start();
             util::PartialRowStridedUnpack<T,D>
             ( B.LocalHeight(), width,
               rowAlign, rowStride,
@@ -72,6 +97,13 @@ void RowAllToAllPromote
               B.RowShift(),
               secondBuf, portionSize,
               B.Buffer(), B.LDim() );
+
+            time_elapsed = clock.Stop();
+            MPI_Reduce(A.Grid().Comm().Rank() == 0 ? MPI_IN_PLACE : &time_elapsed,
+                       &time_elapsed, 1, mpi::TypeMap<T>(),
+                       MPI_MAX, 0, A.Grid().Comm().comm);
+            OutputFromRoot(A.Grid().Comm(),
+                           "  PartialRowStridedUnpack: ", time_elapsed, "s");
         }
     }
     else
