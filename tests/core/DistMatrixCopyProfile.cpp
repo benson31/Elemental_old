@@ -33,6 +33,7 @@ main(int argc, char* argv[])
         int gridHeight = Input("--gridHeight","height of process grid",0);
         const Int m = Input("--m","height of matrix",50);
         const Int n = Input("--n","width of matrix",50);
+        const Int count = Input("--count","number of times to loop", 10);
         ProcessInput();
         PrintInputReport();
 
@@ -43,10 +44,11 @@ main(int argc, char* argv[])
         OutputFromRoot(comm,
                        "Grid = ", grid.Height(), "x", grid.Width(), "\n");
 
-
-        DoCopy<float,Device::GPU>(m, n, grid);
-        DoCopy<double,Device::GPU>(m, n, grid);
-
+        for (Int ii = 0; ii < count; ++ii)
+        {
+            DoCopy<float,Device::GPU>(m, n, grid);
+            DoCopy<double,Device::GPU>(m, n, grid);
+        }
     }
     catch(std::exception& e) { ReportException(e); }
 
