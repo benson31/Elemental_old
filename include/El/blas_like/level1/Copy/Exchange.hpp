@@ -225,6 +225,7 @@ void RowwiseVectorExchange
         return;
 
     Timer clock;
+    double time_elapsed;
 
     OutputFromRoot(A.Grid().Comm(), "RowwiseVectorExchange");
 
@@ -238,8 +239,13 @@ void RowwiseVectorExchange
 
     clock.Start();
     copy::Exchange_impl<T,D>( A, B, sendRankB, recvRankB, B.DistComm() );
+    time_elapsed = clock.Stop();
+    MPI_Reduce(A.Grid().Comm().Rank() == 0 ? MPI_IN_PLACE : &time_elapsed,
+               &time_elapsed, 1, mpi::TypeMap<T>(),
+               MPI_MAX, 0, A.Grid().Comm().comm);
+
     OutputFromRoot(A.Grid().Comm(),
-                   "  Exchange_impl: ", clock.Stop(), "s");
+                   "  Exchange_impl: ", time_elapsed, "s");
 }
 
 } // namespace copy
