@@ -44,38 +44,6 @@ void PrintCxxCompilerInfo( ostream& os=cout );
 bool Using64BitInt();
 bool Using64BitBlasInt();
 
-// For manually initializing and finalizing Elemental; their direct usage
-// in C++ programs now deprecated.
-void Initialize();
-void Initialize( int& argc, char**& argv );
-void Finalize();
-bool Initialized();
-
-// For initializing/finalizing Elemental using RAII
-class Environment
-{
-public:
-    Environment() { Initialize(); }
-    Environment( int& argc, char**& argv ) { Initialize( argc, argv ); }
-    ~Environment() { Finalize(); }
-};
-
-// For getting the MPI argument instance (for internal usage)
-class Args : public choice::MpiArgs
-{
-public:
-    Args
-    ( int argc, char** argv,
-      mpi::Comm comm=mpi::COMM_WORLD, ostream& error=cerr )
-    : choice::MpiArgs(argc,argv,comm,error)
-    { }
-    virtual ~Args() { }
-protected:
-    virtual void HandleVersion( ostream& os=cout ) const;
-    virtual void HandleBuild( ostream& os=cout ) const;
-};
-Args& GetArgs();
-
 // For processing command-line arguments
 template<typename T>
 T Input( string name, string desc );
@@ -176,67 +144,10 @@ template<typename T,
          typename=void>
 void FastResize( vector<T>& v, Int numEntries );
 
-inline void BuildStream( ostringstream& ) { }
-
-template<typename T,typename... ArgPack>
-void BuildStream( ostringstream& os, const T& item, const ArgPack& ... args );
-template<typename... ArgPack>
-string BuildString( const ArgPack& ... args );
-
-class UnrecoverableException : public std::runtime_error
-{
-public:
-    UnrecoverableException( const char* msg="Unrecoverable exception" )
-    : std::runtime_error( msg ) { }
-};
-
-template<typename... ArgPack>
-void UnrecoverableError( const ArgPack& ... args );
-template<typename... ArgPack>
-void LogicError( const ArgPack& ... args );
-template<typename... ArgPack>
-void RuntimeError( const ArgPack& ... args );
-
 // This is the only place that Elemental is currently using duck-typing.
 // I'm not sure if it's a good idea to use it more often.
 template<class MatType>
 string DimsString( const MatType& A, string label="Matrix" );
-
-// This is defined in choice.hpp
-class ArgException;
-
-// An exception which signifies that a matrix was unexpectedly singular.
-class SingularMatrixException : public std::runtime_error
-{
-public:
-    SingularMatrixException( const char* msg="Matrix was singular" )
-    : std::runtime_error( msg ) { }
-};
-
-// An exception which signifies a zero pivot was chosen, though the matrix
-// may not actually be singular
-class ZeroPivotException : public std::runtime_error
-{
-public:
-    ZeroPivotException( const char* msg="Zero pivot was chosen" )
-    : std::runtime_error( msg ) { }
-};
-
-// An exception which signifies that a matrix was unexpectedly non-HPD
-class NonHPDMatrixException  : public std::runtime_error
-{
-public:
-    NonHPDMatrixException( const char* msg="Matrix was not HPD" )
-    : std::runtime_error( msg ) { }
-};
-
-// An exception which signifies that a matrix was unexpectedly non-HPSD
-class NonHPSDMatrixException  : public std::runtime_error
-{
-public:
-    NonHPSDMatrixException( const char* msg="Matrix was not HPSD" )
-    : std::runtime_error( msg ) { }
-};
 
 #ifndef EL_RELEASE
 void EnableTracing();
@@ -260,7 +171,7 @@ public:
             PopCallStack();
     }
 };
-typedef CallStackEntry CSE;
+using CSE = CallStackEntry;
 #endif // !EL_RELEASE
 
 void OpenLog( const char* filename );
@@ -271,8 +182,6 @@ template<typename... ArgPack>
 void Log( const ArgPack& ... args );
 
 void CloseLog();
-
-void ReportException( const exception& e, ostream& os=cerr );
 
 void ComplainIfDebug();
 

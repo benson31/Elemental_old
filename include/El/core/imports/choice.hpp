@@ -8,33 +8,25 @@
    which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
+#pragma once
 #ifndef EL_IMPORTS_CHOICE_HPP
 #define EL_IMPORTS_CHOICE_HPP
 
 #include <algorithm>
+#include <iostream>
+#include <string>
+#include <sstream>
 
-namespace El {
-
-class ArgException : public std::logic_error
+namespace El
 {
-public:
-    ArgException( const char* msg="" ) : std::logic_error( msg ) { }
-};
 
-namespace choice {
-
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::ostream;
-using std::string;
-using std::stringstream;
-using std::vector;
+namespace choice
+{
 
 template<typename TOut,typename TIn>
 inline TOut Cast( const TIn& input )
 {
-    stringstream stream;
+    std::stringstream stream;
     TOut output;
 
     stream << input;
@@ -44,10 +36,10 @@ inline TOut Cast( const TIn& input )
 }
 
 template<>
-inline bool Cast( const string& input )
+inline bool Cast( const std::string& input )
 {
-    string trueString("true");
-    string falseString("false");
+    std::string trueString("true");
+    std::string falseString("false");
     if( input.compare(trueString) == 0 )
         return true;
     else if( input.compare(falseString) == 0 )
@@ -55,7 +47,7 @@ inline bool Cast( const string& input )
     else
     {
         bool output;
-        stringstream stream;
+        std::stringstream stream;
         stream << input;
         stream >> output;
         return output;
@@ -63,78 +55,78 @@ inline bool Cast( const string& input )
 }
 
 template<>
-inline const char* Cast( const string& input )
+inline const char* Cast( const std::string& input )
 { return input.c_str(); }
 
 class Args
 {
 public:
-    Args( int argc, char** argv, ostream& error=cerr );
+    Args( int argc, char** argv, std::ostream& error=std::cerr );
     virtual ~Args() { }
 
     template<typename T>
-    T Input( string name, string desc );
+    T Input( std::string name, std::string desc );
     template<typename T>
-    T Input( string name, string desc, T defaultVal );
+    T Input( std::string name, std::string desc, T defaultVal );
 
-    void Process( ostream& os=cout ) const;
-    void PrintReport( ostream& os=cout ) const;
+    void Process( std::ostream& os=std::cout ) const;
+    void PrintReport( std::ostream& os=std::cout ) const;
 
 protected:
     int argc_;
     char** argv_;
-    vector<bool> usedArgs_;
-    ostream& error_;
+    std::vector<bool> usedArgs_;
+    std::ostream& error_;
 
-    virtual void HandleVersion( ostream& os=cout ) const { EL_UNUSED(os); }
-    virtual void HandleBuild( ostream& os=cout ) const { EL_UNUSED(os); }
+    virtual void HandleVersion(std::ostream& = std::cout) const { }
+    virtual void HandleBuild(std::ostream& = std::cout) const { }
 
     struct RequiredArg
     {
-        string name, desc, typeInfo, usedVal;
+        std::string name, desc, typeInfo, usedVal;
         bool found;
 
         RequiredArg
-        ( string n, string d, string t, string uv, bool f )
+        ( std::string n, std::string d, std::string t, std::string uv, bool f )
         : name(n), desc(d), typeInfo(t), usedVal(uv), found(f) { };
     };
 
     struct OptionalArg
     {
-        string name, desc, typeInfo, defaultVal, usedVal;
+        std::string name, desc, typeInfo, defaultVal, usedVal;
         bool found;
 
-        OptionalArg
-        ( string n, string d, string t, string dv, string uv, bool f )
+        OptionalArg(std::string n, std::string d, std::string t,
+                    std::string dv, std::string uv, bool f )
         : name(n), desc(d), typeInfo(t),
           defaultVal(dv), usedVal(uv), found(f) { }
     };
 
-    vector<RequiredArg> requiredArgs_;
-    vector<OptionalArg> optionalArgs_;
+    std::vector<RequiredArg> requiredArgs_;
+    std::vector<OptionalArg> optionalArgs_;
 };
 
 
 inline
-Args::Args( int argc, char** argv, ostream& error )
+Args::Args( int argc, char** argv, std::ostream& error )
 : argc_(argc), argv_(argv), usedArgs_(argc,false), error_(error)
 { }
 
 template<typename T>
 inline T
-Args::Input( string name, string desc )
+Args::Input( std::string name, std::string desc )
 {
     char** arg = std::find( argv_, argv_+argc_, name );
     const bool found = ( arg != argv_+argc_ );
     const bool invalidFound = ( arg == argv_+argc_-1 );
     if( invalidFound )
     {
-        error_ << "Missing value for last command-line argument" << endl;
+        error_ << "Missing value for last command-line argument" << std::endl;
         throw ArgException();
     }
 
-    const string typeInfo = TypeName<T>();
-    string usedVal = ( found ? arg[1] : "N/A" );
+    const std::string typeInfo = TypeName<T>();
+    std::string usedVal = ( found ? arg[1] : "N/A" );
     requiredArgs_.push_back( RequiredArg(name,desc,typeInfo,usedVal,found) );
 
     // Before returning, store the used indices and check for duplication
@@ -146,13 +138,13 @@ Args::Input( string name, string desc )
             error_ << "WARNING: conflict with " << name << " detected at ";
             if( usedArgs_[offset] && usedArgs_[offset+1] )
                 error_ << "arguments " << offset << " and " << offset+1
-                       << endl;
+                       << std::endl;
             else if( usedArgs_[offset] )
-                error_ << "argument " << offset << endl;
+                error_ << "argument " << offset << std::endl;
             else
-                error_ << "argument " << offset+1 << endl;
+                error_ << "argument " << offset+1 << std::endl;
             error_ << "Please ensure that you did request argument "
-                   << name << " multiple times" << endl;
+                   << name << " multiple times" << std::endl;
         }
         usedArgs_[offset+0] = true;
         usedArgs_[offset+1] = true;
@@ -160,7 +152,7 @@ Args::Input( string name, string desc )
         arg = std::find( arg+1, argv_+argc_, name );
         if( arg != argv_+argc_ )
             error_ << "WARNING: " << name << " was specified twice and only "
-                   << "the first instance is used" << endl;
+                   << "the first instance is used" << std::endl;
     }
 
     return Cast<T>( usedVal );
@@ -168,20 +160,20 @@ Args::Input( string name, string desc )
 
 template<typename T>
 inline T
-Args::Input( string name, string desc, T defaultVal )
+Args::Input( std::string name, std::string desc, T defaultVal )
 {
     char** arg = std::find( argv_, argv_+argc_, name );
     const bool found = ( arg != argv_+argc_ );
     const bool invalidFound = ( arg == argv_+argc_-1 );
     if( invalidFound )
     {
-        error_ << "Missing value for last command-line argument" << endl;
+        error_ << "Missing value for last command-line argument" << std::endl;
         throw ArgException();
     }
 
-    const string typeInfo = TypeName<T>();
-    string defValString = Cast<string>( defaultVal );
-    string usedVal = ( found ? arg[1] : defValString );
+    const std::string typeInfo = TypeName<T>();
+    std::string defValString = Cast<std::string>( defaultVal );
+    std::string usedVal = ( found ? arg[1] : defValString );
 
     optionalArgs_.push_back
     ( OptionalArg(name,desc,typeInfo,defValString,usedVal,found) );
@@ -195,13 +187,13 @@ Args::Input( string name, string desc, T defaultVal )
             error_ << "WARNING: conflict with " << name << " detected at ";
             if( usedArgs_[offset] && usedArgs_[offset+1] )
                 error_ << "arguments " << offset << " and " << offset+1
-                       << endl;
+                       << std::endl;
             else if( usedArgs_[offset] )
-                error_ << "argument " << offset << endl;
+                error_ << "argument " << offset << std::endl;
             else
-                error_ << "argument " << offset+1 << endl;
+                error_ << "argument " << offset+1 << std::endl;
             error_ << "Please ensure that you did request argument "
-                   << name << " multiple times" << endl;
+                   << name << " multiple times" << std::endl;
         }
         usedArgs_[offset+0] = true;
         usedArgs_[offset+1] = true;
@@ -209,7 +201,7 @@ Args::Input( string name, string desc, T defaultVal )
         arg = std::find( arg+1, argv_+argc_, name );
         if( arg != argv_+argc_ )
             error_ << "WARNING: " << name << " was specified twice and only "
-                   << "the first instance is used" << endl;
+                   << "the first instance is used" << std::endl;
     }
 
     if( found )
@@ -219,12 +211,12 @@ Args::Input( string name, string desc, T defaultVal )
 }
 
 inline void
-Args::Process( ostream& os ) const
+Args::Process( std::ostream& os ) const
 {
     HandleVersion( os );
     HandleBuild( os );
 
-    string help = "--help";
+    std::string help = "--help";
     char** arg = std::find( argv_, argv_+argc_, help );
     const bool foundHelp = ( arg != argv_+argc_ );
 
@@ -241,7 +233,7 @@ Args::Process( ostream& os ) const
 }
 
 inline void
-Args::PrintReport( ostream& os ) const
+Args::PrintReport( std::ostream& os ) const
 {
     const int numRequired = requiredArgs_.size();
     const int numOptional = optionalArgs_.size();
@@ -254,7 +246,7 @@ Args::PrintReport( ostream& os ) const
         const RequiredArg& reqArg = requiredArgs_[i];
         if( !reqArg.found )
             ++numReqFailed;
-        string foundString = ( reqArg.found ? "found" : "NOT found" );
+        std::string foundString = ( reqArg.found ? "found" : "NOT found" );
         os << "  " << reqArg.name
            << " [" << reqArg.typeInfo << "," << reqArg.usedVal << ","
            << foundString << "]\n"
@@ -269,7 +261,7 @@ Args::PrintReport( ostream& os ) const
         const OptionalArg& optArg = optionalArgs_[i];
         if( !optArg.found )
             ++numOptFailed;
-        string foundString = ( optArg.found ? "found" : "NOT found" );
+        std::string foundString = ( optArg.found ? "found" : "NOT found" );
         os << "  " << optArg.name
            << " [" << optArg.typeInfo
            << "," << optArg.defaultVal << "," << optArg.usedVal << ","
@@ -278,10 +270,10 @@ Args::PrintReport( ostream& os ) const
     }
 
     os << "Out of " << numRequired << " required arguments, "
-       << numReqFailed << " were not specified." << endl;
+       << numReqFailed << " were not specified." << std::endl;
 
     os << "Out of " << numOptional << " optional arguments, "
-       << numOptFailed << " were not specified.\n" << endl;
+       << numOptFailed << " were not specified.\n" << std::endl;
 }
 
 } // namespace choice

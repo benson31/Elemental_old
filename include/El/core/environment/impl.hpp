@@ -162,56 +162,6 @@ template<typename T,
 void FastResize( vector<T>& v, Int numEntries )
 { v.resize( numEntries ); }
 
-template<typename T,typename... ArgPack>
-void BuildStream( ostringstream& os, const T& item, const ArgPack& ... args )
-{
-    os << item;
-    BuildStream( os, args... );
-}
-
-template<typename... ArgPack>
-string BuildString( const ArgPack& ... args )
-{
-    ostringstream os;
-    BuildStream( os, args... );
-    return os.str();
-}
-
-inline void break_on_me() noexcept {}
-
-template<typename... ArgPack>
-void UnrecoverableError( const ArgPack& ... args )
-{
-    break_on_me();
-
-    ostringstream os;
-    BuildStream( os, args... );
-    os << endl;
-    UnrecoverableException( os.str().c_str() );
-}
-
-template<typename... ArgPack>
-void LogicError( const ArgPack& ... args )
-{
-    break_on_me();
-
-    ostringstream os;
-    BuildStream( os, args... );
-    os << endl;
-    throw std::logic_error( os.str().c_str() );
-}
-
-template<typename... ArgPack>
-void RuntimeError( const ArgPack& ... args )
-{
-    break_on_me();
-
-    ostringstream os;
-    BuildStream( os, args... );
-    os << endl;
-    throw std::runtime_error( os.str().c_str() );
-}
-
 template<class MatType>
 string DimsString( const MatType& A, string label )
 {

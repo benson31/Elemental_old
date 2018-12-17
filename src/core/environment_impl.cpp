@@ -12,15 +12,6 @@
 #include <algorithm>
 #include <set>
 
-namespace {
-
-El::Int numElemInits = 0;
-bool elemInitializedMpi = false;
-
-El::Args* args = 0;
-
-}
-
 namespace El {
 
 void PrintVersion( ostream& os )
@@ -109,140 +100,6 @@ bool Using64BitBlasInt()
 #endif
 }
 
-bool Initialized()
-{ return ::numElemInits > 0; }
-
-void Initialize()
-{
-    int argc=0;
-    char** argv=NULL;
-    Initialize( argc, argv );
-}
-
-void Initialize( int& argc, char**& argv )
-{
-    if( ::numElemInits > 0 )
-    {
-        ++::numElemInits;
-        return;
-    }
-
-    ::args = new Args( argc, argv );
-
-#ifdef HYDROGEN_HAVE_CUDA
-    InitializeCUDA(argc, argv);
-#endif // HYDROGEN_HAVE_CUDA
-
-    ::numElemInits = 1;
-    if( !mpi::Initialized() )
-    {
-        if( mpi::Finalized() )
-        {
-            LogicError
-            ("Cannot initialize elemental after finalizing MPI");
-        }
-#ifdef EL_HYBRID
-        const Int provided =
-            mpi::InitializeThread
-            ( argc, argv, mpi::THREAD_MULTIPLE );
-        const int commRank = mpi::Rank( mpi::COMM_WORLD );
-        if( provided != mpi::THREAD_MULTIPLE && commRank == 0 )
-        {
-            cerr << "WARNING: Could not achieve THREAD_MULTIPLE support."
-                 << endl;
-        }
-#else
-        mpi::Initialize( argc, argv );
-#endif
-        ::elemInitializedMpi = true;
-    }
-    else
-    {
-#ifdef EL_HYBRID
-        const Int provided = mpi::QueryThread();
-        if( provided != mpi::THREAD_MULTIPLE )
-        {
-            throw std::runtime_error
-            ("MPI initialized with inadequate thread support for Elemental");
-        }
-#endif
-    }
-
-#ifdef HYDROGEN_HAVE_CUDA
-    InitializeCUBLAS();
-#endif
-
-#ifdef EL_HAVE_QT5
-    InitializeQt5( argc, argv );
-#endif
-
-    // Queue a default algorithmic blocksize
-    EmptyBlocksizeStack();
-    PushBlocksizeStack( 128 );
-
-    // Build the default grid
-    Grid::InitializeDefault();
-    Grid::InitializeTrivial();
-
-#ifdef HYDROGEN_HAVE_QD
-    InitializeQD();
-#endif
-
-    InitializeRandom();
-
-    // Create the types and ops.
-    // mpfr::SetPrecision within InitializeRandom created the BigFloat types
-    mpi::CreateCustom();
-}
-
-void Finalize()
-{
-    EL_DEBUG_CSE
-    if( ::numElemInits <= 0 )
-    {
-        cerr << "Finalized Elemental more times than initialized" << endl;
-        return;
-    }
-    --::numElemInits;
-
-    if( mpi::Finalized() )
-        cerr << "Warning: MPI was finalized before Elemental." << endl;
-    if( ::numElemInits == 0 )
-    {
-        delete ::args;
-        ::args = 0;
-
-        Grid::FinalizeDefault();
-        Grid::FinalizeTrivial();
-
-        // Destroy the types and ops
-        mpi::DestroyCustom();
-
-#ifdef EL_HAVE_QT5
-        FinalizeQt5();
-#endif
-        if( ::elemInitializedMpi )
-            mpi::Finalize();
-
-        EmptyBlocksizeStack();
-
-#ifdef HYDROGEN_HAVE_QD
-        FinalizeQD();
-#endif
-
-        FinalizeRandom();
-    }
-
-#ifdef HYDROGEN_HAVE_CUDA
-    FinalizeCUDA();
-#endif
-
-    EL_DEBUG_ONLY( CloseLog() )
-#ifdef HYDROGEN_HAVE_MPC
-    if( EL_RUNNING_ON_VALGRIND )
-        mpfr_free_cache();
-#endif
-}
 
 Args& GetArgs()
 {
@@ -282,47 +139,16 @@ void Args::HandleBuild( ostream& os ) const
     }
 }
 
-void ReportException( const exception& e, ostream& os )
-{
-    try
-    {
-        const ArgException& argExcept = dynamic_cast<const ArgException&>(e);
-        if( string(argExcept.what()) != "" )
-            os << argExcept.what() << endl;
-        EL_DEBUG_ONLY(DumpCallStack(os))
-    }
-    catch( UnrecoverableException& recovExcept )
-    {
-        if( string(e.what()) != "" )
-        {
-            os << "Process " << mpi::Rank()
-               << " caught an unrecoverable exception with message:\n"
-               << e.what() << endl;
-        }
-        EL_DEBUG_ONLY(DumpCallStack(os))
-        mpi::Abort( mpi::COMM_WORLD, 1 );
-    }
-    catch( exception& castExcept )
-    {
-        if( string(e.what()) != "" )
-        {
-            os << "Process " << mpi::Rank() << " caught error message:\n"
-               << e.what() << endl;
-        }
-        EL_DEBUG_ONLY(DumpCallStack(os))
-    }
-}
-
 void ComplainIfDebug()
 {
-    EL_DEBUG_ONLY(
-        if( mpi::Rank() == 0 )
-        {
-            Output("=======================================================");
-            Output(" In debug mode! Do not expect competitive performance! ");
-            Output("=======================================================");
-        }
-    )
+#ifndef EL_RELEASE
+    if (mpi::Rank() == 0 )
+    {
+        Output("=======================================================");
+        Output(" In debug mode! Do not expect competitive performance! ");
+        Output("=======================================================");
+    }
+#endif // !EL_RELEASE
 }
 
 template<typename T>

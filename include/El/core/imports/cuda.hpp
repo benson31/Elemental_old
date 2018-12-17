@@ -1,10 +1,15 @@
+#pragma once
 #ifndef HYDROGEN_IMPORTS_CUDA_HPP_
 #define HYDROGEN_IMPORTS_CUDA_HPP_
+
+#include <sstream>
+#include <string>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
+#include <El/core/Exception.hpp>
 
 namespace El
 {
@@ -151,7 +156,7 @@ public:
     /** Get singleton instance of CUDA manager. */
     static GPUManager* Instance();
     /** Get number of visible CUDA devices. */
-    static Unsigned NumDevices();
+    static unsigned int NumDevices();
     /** Get currently active CUDA device. */
     static int Device();
     /** Set active CUDA device. */

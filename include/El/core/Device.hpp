@@ -1,6 +1,14 @@
 #ifndef EL_CORE_DEVICE_HPP_
 #define EL_CORE_DEVICE_HPP_
 
+#include <El/config.h>
+#include <El/core/Meta.hpp>
+#include <El/core/Typedefs.hpp>
+
+#ifdef HYDROGEN_HAVE_CUDA
+#include <El/core/imports/cuda.hpp>
+#endif // HYDROGEN_HAVE_CUDA
+
 namespace El
 {
 

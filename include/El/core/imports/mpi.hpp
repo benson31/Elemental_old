@@ -9,21 +9,29 @@
    which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
+#pragma once
 #ifndef EL_IMPORTS_MPI_HPP
 #define EL_IMPORTS_MPI_HPP
 
+#include <memory>
+#include <tuple>
+#include <type_traits>
+
+#include <El/config.h>
+#include <El/core/Device.hpp>
+#include <El/core/SyncInfo.hpp>
+#include <El/core/types.hpp>
+
 #if defined(HYDROGEN_HAVE_AL_MPI_CUDA) || defined(HYDROGEN_HAVE_NCCL2)
-#include "cuda.hpp"
+#include <El/core/imports/cuda.hpp>
 #define HYDROGEN_ALUMINUM_USES_GPU
 #endif // defined(HYDROGEN_HAVE_AL_MPI_CUDA) || defined(HYDROGEN_HAVE_NCCL2)
 
-#include "aluminum.hpp"
+#include <El/core/imports/aluminum.hpp>
+#include <El/core/Element/decl.hpp>
 
 namespace El
 {
-
-using std::function;
-using std::vector;
 
 namespace mpi
 {
@@ -353,7 +361,7 @@ struct Request
 
     MPI_Request backend;
 
-    vector<byte> buffer;
+    std::vector<byte> buffer;
     bool receivingPacked=false;
     int recvCount;
     T* unpackedRecvBuf;
@@ -421,7 +429,7 @@ struct Types
     static bool createdUserCommOp;
     static El::mpi::Op userCommOp;
 
-    static function<T(const T&,const T&)> userFunc, userCommFunc;
+    static std::function<T(const T&,const T&)> userFunc, userCommFunc;
 
     // Internally called once per type between MPI_Init and MPI_Finalize
     static void Destroy();
@@ -575,7 +583,7 @@ int GetCount( Status& status ) EL_NO_RELEASE_EXCEPT;
 
 template<typename T>
 void SetUserReduceFunc
-( function<T(const T&,const T&)> func, bool commutative=true )
+( std::function<T(const T&,const T&)> func, bool commutative=true )
 {
     if( commutative )
         Types<T>::userCommFunc = func;
@@ -1302,10 +1310,10 @@ void AllToAll
 EL_NO_RELEASE_EXCEPT;
 
 template<typename T>
-vector<T> AllToAll
-( const vector<T>& sendBuf,
-  const vector<int>& sendCounts,
-  const vector<int>& sendDispls,
+std::vector<T> AllToAll
+( const std::vector<T>& sendBuf,
+  const std::vector<int>& sendCounts,
+  const std::vector<int>& sendDispls,
   Comm comm ) EL_NO_RELEASE_EXCEPT;
 
 // Reduce
@@ -1365,7 +1373,7 @@ void Reduce
   int root, Comm comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         Reduce( sb, rb, count, UserCommOp<T>(), root, comm );
     else
@@ -1389,7 +1397,7 @@ T Reduce
 ( T sb, OpClass op, bool commutative, int root, Comm comm )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         return Reduce( sb, UserCommOp<T>(), root, comm );
     else
@@ -1452,7 +1460,7 @@ void Reduce
 ( T* buf, int count, OpClass op, bool commutative, int root, Comm comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         Reduce( buf, count, UserCommOp<T>(), root, comm );
     else
@@ -1639,7 +1647,7 @@ void ReduceScatter(
     const T* sb, T* rb, int count, OpClass op, bool commutative, Comm comm,
     SyncInfo<D> const& syncInfo)
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         ReduceScatter( sb, rb, count, UserCommOp<T>(), comm, syncInfo );
     else
@@ -1705,7 +1713,7 @@ void ReduceScatter(
     T* buf, int count, OpClass op, bool commutative, Comm comm,
     SyncInfo<D> const& syncInfo)
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         ReduceScatter( buf, count, UserCommOp<T>(), comm, syncInfo );
     else
@@ -1746,7 +1754,7 @@ void ReduceScatter
   Comm comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         ReduceScatter( sb, rb, rcs, UserCommOp<T>(), comm );
     else
@@ -1783,7 +1791,7 @@ void Scan(
     int root, Comm comm, SyncInfo<D> const& syncInfo)
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         Scan(sb, rb, count, UserCommOp<T>(), root, comm, syncInfo);
     else
@@ -1804,7 +1812,7 @@ template <typename T, Device D,class OpClass,
 T Scan( T sb, OpClass op, bool commutative, int root, Comm comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         return Scan( sb, UserCommOp<T>(), root, comm );
     else
@@ -1837,7 +1845,7 @@ void Scan
 ( T* buf, int count, OpClass op, bool commutative, int root, Comm comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         Scan( buf, count, UserCommOp<T>(), root, comm );
     else
@@ -1851,17 +1859,17 @@ void Scan(T* buf, int count, Comm comm, SyncInfo<D> const&)
 
 template<typename T>
 void SparseAllToAll
-( const vector<T>& sendBuffer,
-  const vector<int>& sendCounts,
-  const vector<int>& sendOffs,
-        vector<T>& recvBuffer,
-  const vector<int>& recvCounts,
-  const vector<int>& recvOffs,
+( const std::vector<T>& sendBuffer,
+  const std::vector<int>& sendCounts,
+  const std::vector<int>& sendOffs,
+        std::vector<T>& recvBuffer,
+  const std::vector<int>& recvCounts,
+  const std::vector<int>& recvOffs,
         Comm comm ) EL_NO_RELEASE_EXCEPT;
 
 void VerifySendsAndRecvs
-( const vector<int>& sendCounts,
-  const vector<int>& recvCounts, Comm comm );
+( const std::vector<int>& sendCounts,
+  const std::vector<int>& recvCounts, Comm comm );
 
 void CreateCustom() EL_NO_RELEASE_EXCEPT;
 void DestroyCustom() EL_NO_RELEASE_EXCEPT;

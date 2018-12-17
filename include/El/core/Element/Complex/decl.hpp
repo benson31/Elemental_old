@@ -2,12 +2,14 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_ELEMENT_COMPLEX_DECL_HPP
 #define EL_ELEMENT_COMPLEX_DECL_HPP
+
+#include <complex>
 
 #ifdef HYDROGEN_HAVE_MPC
 
@@ -18,11 +20,12 @@
 # error intmax_t is likely not supported by MPI
 #endif
 
-#endif
+#endif // HYDROGEN_HAVE_MPC
 
-namespace El {
+namespace El
+{
 
-template<typename Real>
+template <typename Real>
 class Complex
 {
 public:
@@ -45,7 +48,7 @@ public:
     inline Complex( const S& a );
     template<typename S>
     inline Complex( const Complex<S>& a );
-    
+
     template<typename S,typename T>
     inline Complex( const S& a, const T& b );
 
@@ -238,7 +241,7 @@ public:
 
     inline mpc_ptr Pointer();
     inline mpc_srcptr LockedPointer() const;
-    
+
     inline mpfr_ptr RealPointer();
     inline mpfr_ptr ImagPointer();
     inline mpfr_srcptr LockedRealPointer() const;

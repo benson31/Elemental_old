@@ -6,6 +6,8 @@ set_full_path(THIS_DIR_HEADERS
   DistMatrix.hpp
   DistPermutation.hpp
   Element.hpp
+  Environment.hpp
+  Exception.hpp
   FlamePart.hpp
   Grid.hpp
   Matrix.hpp
