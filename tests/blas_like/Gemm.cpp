@@ -194,6 +194,7 @@ void TestGemm
             (orientA, orientB, alpha, A, B, beta, COrig, C, print);
     PopIndent();
 
+#ifdef HYDROGEN_GEMM_TEST_DO_DOT_ALGORITHM
     if (orientA == NORMAL && orientB == NORMAL)
     {
         // Test the variant of Gemm for panel-panel dot products
@@ -223,6 +224,7 @@ void TestGemm
                 (orientA, orientB, alpha, A, B, beta, COrig, C, print);
         PopIndent();
     }
+#endif // HYDROGEN_GEMM_TEST_DO_DOT_ALGORITHM
     PopIndent();
 #ifdef HYDROGEN_HAVE_CUDA
     cudaEventDestroy(start);
