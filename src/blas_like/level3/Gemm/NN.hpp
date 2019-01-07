@@ -7,7 +7,14 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 
+#include "nvToolsExt.h"
+#include "nvToolsExtCuda.h"
+#include "nvToolsExtCudaRt.h"
+#include "cuda_runtime.h"
+
 namespace El {
+extern std::ofstream root_debug_ofs_;
+
 namespace gemm {
 
 // Cannon's algorithm
@@ -261,6 +268,349 @@ void SUMMA_NNB
     }
 }
 
+// Hack hack hack
+namespace // anon
+{
+
+size_t getDefaultSyncPoolSize() noexcept
+{
+    return 4;
+}
+
+std::vector<SyncInfo<Device::GPU>> syncPool;
+size_t syncPool_size = getDefaultSyncPoolSize();
+bool syncPool_initialized = false;
+
+void ensureSyncPoolSize(size_t size = syncPool_size) noexcept
+{
+    if (size > syncPool.size())
+    {
+        syncPool.resize(size, SyncInfo<Device::GPU>{nullptr,nullptr});
+        syncPool_size = size;
+        syncPool_initialized = false;
+    }
+}
+
+void ensureSyncPoolInit()
+{
+    if (!syncPool_initialized)
+    {
+        for (auto&& si : syncPool)
+        {
+            if (!si.stream_)
+            {
+                cudaStreamCreateWithPriority(
+                    &si.stream_, cudaStreamNonBlocking, 100);
+            }
+            if (!si.event_)
+            {
+                cudaEventCreateWithFlags(&si.event_, cudaEventDisableTiming);
+            }
+        }
+        syncPool_initialized = true;
+    }
+}
+
+std::vector<SyncInfo<Device::GPU>> const& getSyncPool() noexcept
+{
+    ensureSyncPoolSize();
+    ensureSyncPoolInit();
+    return syncPool;
+}
+
+}// namespace <anon>
+
+template <typename T>
+struct TypeCheck;
+
+template <Device D, typename T, typename=EnableIf<IsDeviceValidType<T,D>>>
+void SUMMA_NNC_impl_gpu_multistream(T alpha,
+                                    AbstractDistMatrix<T> const& APre,
+                                    AbstractDistMatrix<T> const& BPre,
+                                    AbstractDistMatrix<T>& CPre)
+{
+//    nvtxDomainHandle_t domain = nvtxDomainCreateA("SUMMA_NNC_MS");
+    if (D != Device::GPU)
+        LogicError("GPU only.");
+
+    AUTO_PROFILE_REGION(
+        "SUMMA.NNC.Multistream",
+        SyncInfoFromMatrix(
+            static_cast<Matrix<T,D> const&>(CPre.LockedMatrix())));
+    root_debug_ofs_ << "BEGIN SUMMA_NNC_impl_gpu_multistream()" << std::endl;
+    EL_DEBUG_CSE
+    const Int sumDim = APre.Width();
+    const Int bsize = Blocksize();
+    const Grid& g = APre.Grid();
+    const Int nblks = sumDim / bsize + 1;
+
+    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> AProx(APre);
+    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> BProx(BPre);
+    DistMatrixReadWriteProxy<T,T,MC,MR,ELEMENT,D> CProx(CPre);
+    auto& A = AProx.GetLocked();
+    auto& B = BProx.GetLocked();
+    auto& C = CProx.Get();
+
+    // Temporary distributions
+    auto&& syncpool = getSyncPool();
+    auto numstreams = std::min(syncpool.size(), static_cast<size_t>(nblks));
+
+    std::vector<DistMatrix<T,MC,STAR,ELEMENT,D>> A1_MC_STAR;
+    std::vector<DistMatrix<T,MR,STAR,ELEMENT,D>> B1Trans_MR_STAR;
+    std::vector<DistMatrix<T,MC,MR,ELEMENT,D>> C_Views;
+
+    A1_MC_STAR.reserve(numstreams);
+    B1Trans_MR_STAR.reserve(numstreams);
+    C_Views.reserve(numstreams);
+
+    root_debug_ofs_ << "Setting up " << numstreams << " temporary matrices."
+                    << std::endl;
+
+    for (auto id = 0UL; id < numstreams; ++id)
+    {
+        root_debug_ofs_ << "Stream " << id << ": {stream:" << get_stream_name(syncPool[id].stream_)
+                        << ", event:" << get_event_name(syncPool[id].event_) << "}" << std::endl;
+
+        auto A1 = A1_MC_STAR.emplace(A1_MC_STAR.end(), g);
+        auto B1 = B1Trans_MR_STAR.emplace(B1Trans_MR_STAR.end(), g);
+        auto C1 = C_Views.emplace(C_Views.end(), g);
+
+        A1->AlignWith(C);
+        B1->AlignWith(C);
+        View(*C1, C);
+
+        SetSyncInfo(A1->Matrix(), syncPool[id]);
+        SetSyncInfo(B1->Matrix(), syncPool[id]);
+        SetSyncInfo(C1->Matrix(), syncPool[id]);
+    }
+    root_debug_ofs_ << "Done setting up temporary matrices.\n"
+                    << "Launching block Gemms..." << std::endl;
+
+    Int k = 0;
+    size_t nblks_per_stream = nblks / numstreams;
+    for (size_t blk = 0; blk < nblks_per_stream; ++blk)
+    {
+        for (size_t sid = 0; sid < numstreams; ++sid)
+        {
+            root_debug_ofs_ << "Starting blk " << blk << " on stream " << sid << std::endl;
+
+            std::string id = std::string("Blk.") + std::to_string(blk) + ".SID."
+
+                + std::to_string(sid);
+            AUTO_PROFILE_REGION(
+                std::move(id),
+                SyncInfoFromMatrix(
+                    static_cast<Matrix<T,D> const&>(
+                        C_Views[sid].LockedMatrix())));
+
+            DistMatrix<T,MC,MR,ELEMENT,D> A1(g), B1(g);
+            const Int nb = Min(bsize,sumDim-k);
+            {
+                root_debug_ofs_ << "-- Setup A1" << std::endl;
+                AUTO_NOSYNC_PROFILE_REGION("A1");
+                SetSyncInfo(A1.Matrix(), syncPool[sid]);
+                A1 = A(ALL,        IR(k,k+nb));
+                root_debug_ofs_ << "-- DONE setup A1" << std::endl;
+            }
+            {
+                root_debug_ofs_ << "-- Setup B1" << std::endl;
+                AUTO_NOSYNC_PROFILE_REGION("B1");
+                SetSyncInfo(B1.Matrix(), syncPool[sid]);
+                B1 = B(IR(k,k+nb), ALL       );
+                root_debug_ofs_ << "-- DONE setup B1" << std::endl;
+            }
+
+            // C[MC,MR] += alpha A1[MC,*] (B1^T[MR,*])^T
+            //           = alpha A1[MC,*] B1[*,MR]
+            {
+                root_debug_ofs_ << "-- Setup A1_MC_STAR" << std::endl;
+
+                AUTO_NOSYNC_PROFILE_REGION("A1_MC_STAR");
+                A1_MC_STAR[sid] = A1;
+                root_debug_ofs_ << "-- DONE setup A1_MC_STAR" << std::endl;
+            }
+            {
+                root_debug_ofs_ << "-- Setup B1Trans_MR_STAR" << std::endl;
+                AUTO_NOSYNC_PROFILE_REGION("B1T_MR_STAR");
+                Transpose(B1, B1Trans_MR_STAR[sid]);
+                root_debug_ofs_ << "-- DONE setup B1Trans_MR_STAR" << std::endl;
+            }
+            {
+                root_debug_ofs_ << "-- LocalGemm" << std::endl;
+                AUTO_NOSYNC_PROFILE_REGION("LocalGemm");
+                LocalGemm(NORMAL, TRANSPOSE,
+                          alpha, A1_MC_STAR[sid], B1Trans_MR_STAR[sid],
+                          T(1), C_Views[sid]);
+                root_debug_ofs_ << "-- Done LocalGemm" << std::endl;
+            }
+
+            // Update the blocksize
+            k += bsize;
+
+            root_debug_ofs_ << "Done with blk " << blk << " on stream " << sid << std::endl;
+        }
+    }
+    root_debug_ofs_ << "Done setting up temporary matrices.\n"
+                    << "END SUMMA_NNC_impl_gpu_multistream()" << std::endl;
+//    nvtxDomainDestroy(domain);
+}
+
+
+template <Device D, typename T, typename=EnableIf<IsDeviceValidType<T,D>>>
+void SUMMA_NNC_impl_gpu_multistream_two(T alpha,
+                                        AbstractDistMatrix<T> const& APre,
+                                        AbstractDistMatrix<T> const& BPre,
+                                        AbstractDistMatrix<T>& CPre)
+{
+//    nvtxDomainHandle_t domain = nvtxDomainCreateA("SUMMA_NNC_MS");
+    if (D != Device::GPU)
+        LogicError("GPU only.");
+
+    AUTO_PROFILE_REGION(
+        "SUMMA.NNC.Multistream.2",
+        SyncInfoFromMatrix(
+            static_cast<Matrix<T,D> const&>(CPre.LockedMatrix())));
+    root_debug_ofs_ << "BEGIN SUMMA_NNC_impl_gpu_multistream()" << std::endl;
+    EL_DEBUG_CSE
+    const Int sumDim = APre.Width();
+    const Int bsize = Blocksize();
+    const Grid& g = APre.Grid();
+    const Int nblks = sumDim / bsize + 1;
+
+    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> AProx(APre);
+    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> BProx(BPre);
+    DistMatrixReadWriteProxy<T,T,MC,MR,ELEMENT,D> CProx(CPre);
+    auto& A = AProx.GetLocked();
+    auto& B = BProx.GetLocked();
+    auto& C = CProx.Get();
+
+    // Temporary distributions
+    auto&& syncpool = getSyncPool();
+    auto numstreams = std::min(syncpool.size(), static_cast<size_t>(nblks));
+
+    std::vector<DistMatrix<T,MC,STAR,ELEMENT,D>> A1_MC_STAR;
+    std::vector<DistMatrix<T,MR,STAR,ELEMENT,D>> B1Trans_MR_STAR;
+    std::vector<DistMatrix<T,MC,MR,ELEMENT,D>> C_Views;
+
+    A1_MC_STAR.reserve(numstreams);
+    B1Trans_MR_STAR.reserve(numstreams);
+    C_Views.reserve(numstreams);
+
+    root_debug_ofs_ << "Setting up " << numstreams << " temporary matrices."
+                    << std::endl;
+
+    for (auto id = 0UL; id < numstreams; ++id)
+    {
+        root_debug_ofs_ << "Stream " << id << ": {stream:" << get_stream_name(syncPool[id].stream_)
+                        << ", event:" << get_event_name(syncPool[id].event_) << "}" << std::endl;
+
+        auto A1 = A1_MC_STAR.emplace(A1_MC_STAR.end(), g);
+        auto B1 = B1Trans_MR_STAR.emplace(B1Trans_MR_STAR.end(), g);
+        auto C1 = C_Views.emplace(C_Views.end(), g);
+
+        A1->AlignWith(C);
+        B1->AlignWith(C);
+        View(*C1, C);
+
+        SetSyncInfo(A1->Matrix(), syncPool[id]);
+        SetSyncInfo(B1->Matrix(), syncPool[id]);
+        SetSyncInfo(C1->Matrix(), syncPool[id]);
+    }
+    root_debug_ofs_ << "Done setting up temporary matrices.\n"
+                    << "Launching block Gemms..." << std::endl;
+
+    Int k = 0;
+    while (k < sumDim)
+    {
+        // Launch N communications
+        Int k_start = k;
+        for (size_t sid = 0; sid < numstreams; ++sid)
+        {
+            if (k_start >= sumDim)
+                continue;
+
+            std::string id = std::string("SID.") + std::to_string(sid);
+            AUTO_PROFILE_REGION(
+                std::move(id),
+                SyncInfoFromMatrix(
+                    static_cast<Matrix<T,D> const&>(
+                        C_Views[sid].LockedMatrix())));
+
+            DistMatrix<T,MC,MR,ELEMENT,D> A1(g), B1(g);
+            const Int nb = Min(bsize,sumDim-k_start);
+            {
+                root_debug_ofs_ << "-- Setup A1" << std::endl;
+                AUTO_NOSYNC_PROFILE_REGION("A1");
+                SetSyncInfo(A1.Matrix(), syncPool[sid]);
+                A1 = A(ALL,        IR(k_start,k_start+nb));
+                root_debug_ofs_ << "-- DONE setup A1" << std::endl;
+            }
+            {
+                root_debug_ofs_ << "-- Setup B1" << std::endl;
+                AUTO_NOSYNC_PROFILE_REGION("B1");
+                SetSyncInfo(B1.Matrix(), syncPool[sid]);
+                B1 = B(IR(k_start,k_start+nb), ALL       );
+                root_debug_ofs_ << "-- DONE setup B1" << std::endl;
+            }
+
+            // C[MC,MR] += alpha A1[MC,*] (B1^T[MR,*])^T
+            //           = alpha A1[MC,*] B1[*,MR]
+            {
+                root_debug_ofs_ << "-- Setup A1_MC_STAR" << std::endl;
+
+                AUTO_NOSYNC_PROFILE_REGION("A1_MC_STAR");
+                A1_MC_STAR[sid] = A1;
+                root_debug_ofs_ << "-- DONE setup A1_MC_STAR" << std::endl;
+            }
+            {
+                root_debug_ofs_ << "-- Setup B1Trans_MR_STAR" << std::endl;
+                AUTO_NOSYNC_PROFILE_REGION("B1T_MR_STAR");
+                Transpose(B1, B1Trans_MR_STAR[sid]);
+                root_debug_ofs_ << "-- DONE setup B1Trans_MR_STAR" << std::endl;
+            }
+
+            k_start += bsize;
+        }
+
+        AddSynchronizationPoint(
+            SyncInfo<Device::GPU>{GPUManager::Stream(),
+                    GPUManager::Event()});
+        for (size_t sid = 0; sid < numstreams; ++sid)
+        {
+            cudaStreamWaitEvent(syncPool[sid].stream_, GPUManager::Event(), 0);
+        }
+
+        // Launch N computations
+        k_start = k;
+        for (size_t sid = 0; sid < numstreams; ++sid)
+        {
+            if (k_start >= sumDim)
+                continue;
+
+            root_debug_ofs_ << "-- LocalGemm" << std::endl;
+            AUTO_NOSYNC_PROFILE_REGION("LocalGemm");
+            LocalGemm(NORMAL, TRANSPOSE,
+                      alpha, A1_MC_STAR[sid], B1Trans_MR_STAR[sid],
+                      T(1), C_Views[sid]);
+            root_debug_ofs_ << "-- Done LocalGemm" << std::endl;
+
+            k_start += bsize;
+        }
+
+        for (size_t sid = 0; sid < numstreams; ++sid)
+        {
+            AddSynchronizationPoint(syncPool[sid]);
+            cudaStreamWaitEvent(GPUManager::Stream(), syncPool[sid].event_, 0);
+        }
+
+        k = k_start;
+    }
+
+//    nvtxDomainDestroy(domain);
+}
+
+
+
 // Normal Normal Gemm that avoids communicating the matrix C
 template <Device D, typename T, typename=EnableIf<IsDeviceValidType<T,D>>>
 void SUMMA_NNC_impl(T alpha,
@@ -305,6 +655,27 @@ void SUMMA_NNC_impl(T alpha,
         (NORMAL, TRANSPOSE, alpha, A1_MC_STAR, B1Trans_MR_STAR, T(1), C);
     }
 }
+template <Device D, typename T,
+          typename=DisableIf<IsDeviceValidType<T,D>>,
+          typename=void>
+void SUMMA_NNC_impl_gpu_multistream(T alpha,
+                                    AbstractDistMatrix<T> const& APre,
+                                    AbstractDistMatrix<T> const& BPre,
+                                    AbstractDistMatrix<T>& CPre)
+{
+    LogicError("SUMMA_NNC_impl type-device combo not supported.");
+}
+
+template <Device D, typename T,
+          typename=DisableIf<IsDeviceValidType<T,D>>,
+          typename=void>
+void SUMMA_NNC_impl_gpu_multistream_two(T alpha,
+                                    AbstractDistMatrix<T> const& APre,
+                                    AbstractDistMatrix<T> const& BPre,
+                                    AbstractDistMatrix<T>& CPre)
+{
+    LogicError("SUMMA_NNC_impl type-device combo not supported.");
+}
 
 template <Device D, typename T,
           typename=DisableIf<IsDeviceValidType<T,D>>, typename=void>
@@ -315,6 +686,8 @@ void SUMMA_NNC_impl(T alpha,
 {
     LogicError("SUMMA_NNC_impl type-device combo not supported.");
 }
+
+#define USE_MULTISTREAM_GEMM
 
 template<typename T>
 void SUMMA_NNC
@@ -332,7 +705,11 @@ void SUMMA_NNC
         break;
 #ifdef HYDROGEN_HAVE_CUDA
     case Device::GPU:
+#ifdef USE_MULTISTREAM_GEMM
+        SUMMA_NNC_impl_gpu_multistream_two<Device::GPU>(alpha, APre, BPre, CPre);
+#else
         SUMMA_NNC_impl<Device::GPU>(alpha, APre, BPre, CPre);
+#endif // USE_MULTISTREAM_GEMM
         break;
 #endif // HYDROGEN_HAVE_CUDA
     default:
