@@ -277,6 +277,11 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
     find_package(CUDA REQUIRED) # Enable all the macros
     find_package(NVML REQUIRED)
 
+    find_package(MAGMA)
+    if (MAGMA_FOUND)
+      set(USE_MAGMABLAS_GEMM ON)
+    endif ()
+
     if (${PROJECT_NAME}_ENABLE_CUB)
       find_package(CUB REQUIRED)
       set(HYDROGEN_HAVE_CUB TRUE)

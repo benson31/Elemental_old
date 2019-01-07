@@ -43,4 +43,6 @@
 #cmakedefine HYDROGEN_HAVE_VTUNE
 #cmakedefine HYDROGEN_DEFAULT_SYNC_PROFILING
 
+#cmakedefine USE_MAGMABLAS_GEMM
+
 #endif /* HYDROGEN_CONFIG_H */
