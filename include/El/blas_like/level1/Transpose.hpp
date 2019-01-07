@@ -9,6 +9,8 @@
 #ifndef EL_BLAS_TRANSPOSE_HPP
 #define EL_BLAS_TRANSPOSE_HPP
 
+#include <El/core/Profiling.hpp>
+
 namespace El {
 
 namespace transpose {
@@ -99,6 +101,8 @@ void Transpose(AbstractMatrix<T> const& A, AbstractMatrix<T>& B,
 template<typename T>
 void Transpose( const Matrix<T>& A, Matrix<T>& B, bool conjugate )
 {
+    AUTO_PROFILE_REGION("Transpose.Matrix.CPU", SyncInfoFromMatrix(B));
+
     EL_DEBUG_CSE
     const Int m = A.Height();
     const Int n = A.Width();
@@ -163,6 +167,8 @@ template <typename T, typename>
 void Transpose(Matrix<T,Device::GPU> const& A,
                Matrix<T,Device::GPU>& B, bool conjugate )
 {
+    AUTO_PROFILE_REGION("Transpose.Matrix.GPU", SyncInfoFromMatrix(B));
+
     const Int m = A.Height(), n = A.Width();
     B.Resize(n,m);
 
@@ -203,6 +209,7 @@ void Transpose
   bool conjugate )
 {
     EL_DEBUG_CSE
+    AUTO_NOSYNC_PROFILE_REGION("Transpose.ElementalMatrix");
     const auto AData = A.DistData();
     const auto BData = B.DistData();
 

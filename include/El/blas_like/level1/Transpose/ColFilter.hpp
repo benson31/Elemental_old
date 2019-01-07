@@ -19,6 +19,8 @@ void ColFilter
         ElementalMatrix<T>& B, bool conjugate )
 {
     EL_DEBUG_CSE
+    AUTO_NOSYNC_PROFILE_REGION("Transpose.ColFilter.ElementalMatrix");
+
     EL_DEBUG_ONLY(
       if( A.ColDist() != B.RowDist() ||
           A.RowDist() != Collect(B.ColDist()) )

@@ -40,6 +40,7 @@ void ColAllGather_impl(const ElementalMatrix<T>& A, ElementalMatrix<T>& B)
         syncInfoA = SyncInfoFromMatrix(static_cast<Matrix<T,D> const&>(A.LockedMatrix())),
         syncInfoB = SyncInfoFromMatrix(static_cast<Matrix<T,D> const&>(B.LockedMatrix()));
 
+    AUTO_PROFILE_REGION(std::string("Copy.ColAllGather.") + DeviceName<D>(), syncInfoB);
     auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
 
     if (A.Participating())

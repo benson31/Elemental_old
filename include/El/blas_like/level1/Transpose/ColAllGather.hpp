@@ -19,13 +19,16 @@ void ColAllGather
         ElementalMatrix<T>& B, bool conjugate )
 {
     EL_DEBUG_CSE
+    AUTO_NOSYNC_PROFILE_REGION("Transpose.ColAllGather.ElementalMatrix");
+
     EL_DEBUG_ONLY(
-      if( B.ColDist() != A.RowDist() ||
-          B.RowDist() != Collect(A.ColDist()) )
-          LogicError("Incompatible distributions");
+        if ( B.ColDist() != A.RowDist() ||
+             B.RowDist() != Collect(A.ColDist()) )
+            LogicError("Incompatible distributions");
     )
-    unique_ptr<ElementalMatrix<T>> ATrans
-    ( A.ConstructTranspose(A.Grid(),A.Root()) );
+
+    unique_ptr<ElementalMatrix<T>> ATrans(
+        A.ConstructTranspose(A.Grid(),A.Root()));
     ATrans->AlignWith( A );
     ATrans->Resize( A.Width(), A.Height() );
     Transpose( A.LockedMatrix(), ATrans->Matrix(), conjugate );

@@ -13,15 +13,18 @@ void AllGather(
     SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
-
+    AUTO_PROFILE_REGION("MPI.AllGather.Al", syncInfo);
     using Backend = BestBackend<T,D,Collective::ALLGATHER>;
     auto alSyncInfo =
         SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
 
     auto multisync = MakeMultiSync(alSyncInfo, syncInfo);
 
-    Al::Allgather<Backend>(
-        sbuf, rbuf, sc, comm.template GetComm<Backend>());
+    {
+        AUTO_NOSYNC_PROFILE_REGION("Al.Allgather");
+        Al::Allgather<Backend>(
+            sbuf, rbuf, sc, comm.template GetComm<Backend>());
+    }
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 

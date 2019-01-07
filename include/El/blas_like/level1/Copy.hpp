@@ -13,6 +13,7 @@
 #include <omp.h>
 #endif
 
+#include <El/core/Profiling.hpp>
 #include <El/blas_like/level1/Copy/internal_decl.hpp>
 #include <El/blas_like/level1/Copy/GeneralPurpose.hpp>
 #include <El/blas_like/level1/Copy/util.hpp>
@@ -67,6 +68,7 @@ template<typename T>
 void Copy( const Matrix<T>& A, Matrix<T>& B )
 {
     EL_DEBUG_CSE
+    AUTO_PROFILE_REGION("Copy.Matrix.CPU", SyncInfoFromMatrix(B));
     const Int height = A.Height();
     const Int width = A.Width();
     const Int size = height * width;
@@ -114,6 +116,7 @@ template<typename T>
 void Copy(const Matrix<T,Device::GPU>& A, Matrix<T,Device::GPU>& B)
 {
     EL_DEBUG_CSE
+    AUTO_PROFILE_REGION("Copy.Matrix.GPU", SyncInfoFromMatrix(B));
     const Int height = A.Height();
     const Int width = A.Width();
     B.Resize(height, width);
@@ -140,6 +143,7 @@ template <typename T>
 void Copy(Matrix<T,Device::CPU> const& A, Matrix<T,Device::GPU>& B)
 {
     EL_DEBUG_CSE
+    AUTO_PROFILE_REGION("Copy.Matrix.CPU.GPU", SyncInfoFromMatrix(B));
     const Int height = A.Height();
     const Int width = A.Width();
     B.Resize(height, width);
@@ -158,6 +162,7 @@ template <typename T>
 void Copy(Matrix<T,Device::GPU> const& A, Matrix<T,Device::CPU>& B)
 {
     EL_DEBUG_CSE
+    AUTO_PROFILE_REGION("Copy.Matrix.GPU.CPU", SyncInfoFromMatrix(A));
     const Int height = A.Height();
     const Int width = A.Width();
     B.Resize(height, width);

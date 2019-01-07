@@ -19,6 +19,7 @@ void PartialColAllGather
         ElementalMatrix<T>& B, bool conjugate )
 {
     EL_DEBUG_CSE
+    AUTO_NOSYNC_PROFILE_REGION("Transpose.PartialColAllGather.ElementalMatrix");
     EL_DEBUG_ONLY(
       if( B.ColDist() != A.RowDist() ||
           B.RowDist() != Partial(A.ColDist()) )
