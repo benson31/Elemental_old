@@ -1,3 +1,4 @@
+
 #include "El-lite.hpp"
 #include "El/core/imports/cuda.hpp"
 #include "El/core/imports/cublas.hpp"
@@ -5,6 +6,10 @@
 #include <cublas_v2.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
+
+#ifndef USE_MAGMABLAS_GEMM
+#include <magma.h>
+#endif
 
 namespace El
 {
@@ -80,6 +85,7 @@ inline cublasOperation_t CharTocuBLASOp(char c)
 //
 // BLAS 3
 //
+#ifndef USE_MAGMABLAS_GEMM
 #define ADD_GEMM_IMPL(ScalarType, TypeChar)                             \
     void Gemm(                                                          \
         char transA, char transB, int m, int n, int k,                  \
@@ -94,6 +100,72 @@ inline cublasOperation_t CharTocuBLASOp(char c)
             CharTocuBLASOp(transA), CharTocuBLASOp(transB),             \
             m, n, k, &alpha, A, ALDim, B, BLDim, &beta, C, CLDim));     \
     }
+#else
+
+namespace
+{
+
+struct magma_queue_wrapper
+{
+    magma_queue_t queue_;
+    operator magma_queue_t() const noexcept { return queue_; }
+
+    magma_queue_wrapper() noexcept
+    {
+        magma_queue_create(GPUManager::Device(), &queue_);
+    }
+
+    ~magma_queue_wrapper()
+    {
+        magma_queue_destroy(queue_);
+    }
+};// struct magma_queue_wrapper
+
+magma_trans_t CharToMAGMAOp(char a) noexcept
+{
+    switch (a)
+    {
+    case 'T':
+    case 't':
+        return MagmaTrans;
+    case 'H':
+    case 'h':
+    case 'C':
+    case 'c':
+        return MagmaConjTrans;
+    }
+
+    return MagmaNoTrans;
+}
+
+} // namespace anon
+
+magma_queue_wrapper magma_queue_;
+
+#define ADD_GEMM_IMPL(ScalarType, TypeChar)                     \
+    void Gemm(                                                  \
+        char transA, char transB, int m, int n, int k,          \
+        ScalarType const& alpha,                                \
+        ScalarType const* A, int ALDim,                         \
+        ScalarType const* B, int BLDim,                         \
+        ScalarType const& beta,                                 \
+        ScalarType* C, int CLDim)                               \
+    {                                                           \
+    cudaStream_t stream;                                        \
+    EL_CHECK_CUBLAS(                                            \
+        cublasGetStream(GPUManager::cuBLASHandle(), &stream));  \
+    SyncInfo<Device::GPU> master{                               \
+        magma_queue_get_cuda_stream(magma_queue_),              \
+        GPUManager::Event()},                                   \
+    other{stream, GPUManager::Event()};                         \
+    auto multisync = MakeMultiSync(master, other);              \
+                                                                \
+    magmablas_ ## TypeChar ## gemm(                             \
+        CharToMAGMAOp(transA), CharToMAGMAOp(transB),           \
+        m, n, k, alpha, A, ALDim, B, BLDim, beta, C, CLDim,     \
+        magma_queue_);                                          \
+}
+#endif // USE_MAGMABLAS_GEMM
 
 //
 // BLAS-like Extension
@@ -126,8 +198,13 @@ ADD_GEMV_IMPL(float, S)
 ADD_GEMV_IMPL(double, D)
 
 // BLAS 3
+#ifndef USE_MAGMABLAS_GEMM
 ADD_GEMM_IMPL(float, S)
 ADD_GEMM_IMPL(double, D)
+#else
+ADD_GEMM_IMPL(float, s)
+ADD_GEMM_IMPL(double, d)
+#endif
 
 // BLAS-like extension
 ADD_GEAM_IMPL(float, S)
