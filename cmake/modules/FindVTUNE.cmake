@@ -2,6 +2,7 @@
 #
 #   VTUNE_INCLUDE_PATH
 #   VTUNE_LIBRARY
+#   VTUNE_LIBRARIES
 #
 # The following IMPORTED target is also created:
 #
@@ -33,4 +34,6 @@ if (VTUNE_FOUND)
 
   set_property(TARGET vtune::vtune PROPERTY
     INTERFACE_LINK_LIBRARIES "${VTUNE_LIBRARY}")
+
+  set(VTUNE_LIBRARIES vtune::vtune)
 endif (VTUNE_FOUND)

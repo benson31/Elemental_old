@@ -2,6 +2,7 @@
 #
 #   NVTX_FOUND
 #   NVTX_LIBRARY
+#   NVTX_LIBRARIES
 #
 # Defines the following imported target:
 #
@@ -27,4 +28,6 @@ if (NVTX_FOUND)
 
   set_property(TARGET cuda::nvtx PROPERTY
     INTERFACE_LINK_LIBRARIES "${NVTX_LIBRARY}")
+
+  set(NVTX_LIBRARIES cuda::nvtx)
 endif (NVTX_FOUND)

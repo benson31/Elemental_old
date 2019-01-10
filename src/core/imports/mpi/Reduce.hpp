@@ -9,25 +9,20 @@ namespace mpi
 template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,COLL>>*/>
 void Reduce(T const* sbuf, T* rbuf, int count, Op op,
-            int root, Comm comm, SyncInfo<D> const& syncInfo)
+            int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::REDUCE>;
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto syncHelper = MakeMultiSync(alSyncInfo, syncInfo);
-
     Al::Reduce<Backend>(
         sbuf, rbuf, count, MPI_Op2ReductionOperator(NativeOp<T>(op)),
-        root, comm.template GetComm<Backend>());
+        root, comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
 void Reduce(T const* sbuf, T* rbuf, int count, Op op,
-            int root, Comm comm, SyncInfo<D> const& syncInfo)
+            int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
     if (count == 0)
@@ -44,14 +39,14 @@ void Reduce(T const* sbuf, T* rbuf, int count, Op op,
     Synchronize(syncInfo);
 
     MPI_Op opC = NativeOp<T>(op);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce(
-            sbuf, rbuf, count, TypeMap<T>(), opC, root, comm.comm));
+            sbuf, rbuf, count, TypeMap<T>(), opC, root, comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
 void Reduce(const Complex<T>* sbuf, Complex<T>* rbuf, int count, Op op,
-            int root, Comm comm, SyncInfo<D> const& syncInfo)
+            int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
     if (count == 0)
@@ -71,28 +66,28 @@ void Reduce(const Complex<T>* sbuf, Complex<T>* rbuf, int count, Op op,
     if (op == SUM)
     {
         MPI_Op opC = NativeOp<T>(op);
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Reduce(
-                sbuf, rbuf, 2*count, TypeMap<T>(), opC, root, comm.comm));
+                sbuf, rbuf, 2*count, TypeMap<T>(), opC, root, comm.GetMPIComm()));
     }
     else
     {
         MPI_Op opC = NativeOp<Complex<T>>(op);
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Reduce(
-                sbuf, rbuf, count, TypeMap<Complex<T>>(), opC, root, comm.comm));
+                sbuf, rbuf, count, TypeMap<Complex<T>>(), opC, root, comm.GetMPIComm()));
     }
 #else
     MPI_Op opC = NativeOp<Complex<T>>(op);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce(
-            sbuf, rbuf, count, TypeMap<Complex<T>>(), opC, root, comm.comm));
+            sbuf, rbuf, count, TypeMap<Complex<T>>(), opC, root, comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
 void Reduce(T const* sbuf, T* rbuf, int count, Op op,
-            int root, Comm comm, SyncInfo<D> const& syncInfo)
+            int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
     if (count == 0)
@@ -116,29 +111,29 @@ void Reduce(T const* sbuf, T* rbuf, int count, Op op,
 
     if (commRank == root)
         ReserveSerialized(count, rbuf, packedRecv);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce(
             packedSend.data(), packedRecv.data(), count, TypeMap<T>(),
-            opC, root, comm.comm));
+            opC, root, comm.GetMPIComm()));
     if (commRank == root)
         Deserialize(count, packedRecv, rbuf);
 }
 
 template <typename T, Device D, typename, typename>
-void Reduce(T const*, T*, int, Op, int, Comm, SyncInfo<D> const&)
+void Reduce(T const*, T*, int, Op, int, Comm const&, SyncInfo<D> const&)
 {
     LogicError("Reduce: Bad device/type combination.");
 }
 
 template <typename T, Device D>
 void Reduce(T const* sbuf, T* rbuf, int count, int root,
-            Comm comm, SyncInfo<D> const& syncInfo)
+            Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     Reduce(sbuf, rbuf, count, SUM, root, std::move(comm), syncInfo);
 }
 
 template <typename T, Device D>
-T Reduce(T sb, Op op, int root, Comm comm, SyncInfo<D> const& syncInfo)
+T Reduce(T sb, Op op, int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     T rb;
     Reduce(&sb, &rb, 1, op, root, std::move(comm), syncInfo);
@@ -146,7 +141,7 @@ T Reduce(T sb, Op op, int root, Comm comm, SyncInfo<D> const& syncInfo)
 }
 
 template <typename T, Device D>
-T Reduce(T sb, int root, Comm comm, SyncInfo<D> const& syncInfo)
+T Reduce(T sb, int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     T rb;
     Reduce(&sb, &rb, 1, SUM, root, std::move(comm), syncInfo);
@@ -157,24 +152,19 @@ T Reduce(T sb, int root, Comm comm, SyncInfo<D> const& syncInfo)
 template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,COLL>>*/>
 void Reduce(T* buf, int count, Op op,
-            int root, Comm comm, SyncInfo<D> const& syncInfo)
+            int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::REDUCE>;
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto syncHelper = MakeMultiSync(alSyncInfo, syncInfo);
-
     Al::Reduce<Backend>(
         buf, count, MPI_Op2ReductionOperator(NativeOp<T>(op)),
-        root, comm.template GetComm<Backend>());
+        root, comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
-void Reduce(T* buf, int count, Op op, int root, Comm comm,
+void Reduce(T* buf, int count, Op op, int root, Comm const& comm,
             SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -194,17 +184,17 @@ void Reduce(T* buf, int count, Op op, int root, Comm comm,
     MPI_Op opC = NativeOp<T>(op);
 
     if (commRank == root)
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Reduce(
-                MPI_IN_PLACE, buf, count, TypeMap<T>(), opC, root, comm.comm));
+                MPI_IN_PLACE, buf, count, TypeMap<T>(), opC, root, comm.GetMPIComm()));
     else
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Reduce(
-                buf, 0, count, TypeMap<T>(), opC, root, comm.comm));
+                buf, 0, count, TypeMap<T>(), opC, root, comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
-void Reduce(Complex<T>* buf, int count, Op op, int root, Comm comm,
+void Reduce(Complex<T>* buf, int count, Op op, int root, Comm const& comm,
             SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -227,50 +217,50 @@ void Reduce(Complex<T>* buf, int count, Op op, int root, Comm comm,
         MPI_Op opC = NativeOp<T>(op);
         if (commRank == root)
         {
-            CheckMpi(
+            EL_CHECK_MPI_CALL(
                 MPI_Reduce(
                     MPI_IN_PLACE, buf, 2*count, TypeMap<T>(), opC,
-                    root, comm.comm));
+                    root, comm.GetMPIComm()));
         }
         else
-            CheckMpi(
+            EL_CHECK_MPI_CALL(
                 MPI_Reduce(
-                    buf, 0, 2*count, TypeMap<T>(), opC, root, comm.comm));
+                    buf, 0, 2*count, TypeMap<T>(), opC, root, comm.GetMPIComm()));
     }
     else
     {
         MPI_Op opC = NativeOp<Complex<T>>(op);
         if (commRank == root)
         {
-            CheckMpi(
+            EL_CHECK_MPI_CALL(
                 MPI_Reduce(
                     MPI_IN_PLACE, buf, count, TypeMap<Complex<T>>(), opC,
-                    root, comm.comm));
+                    root, comm.GetMPIComm()));
         }
         else
-            CheckMpi(
+            EL_CHECK_MPI_CALL(
                 MPI_Reduce(
                     buf, 0, count, TypeMap<Complex<T>>(), opC,
-                    root, comm.comm));
+                    root, comm.GetMPIComm()));
     }
 #else
     MPI_Op opC = NativeOp<Complex<T>>(op);
     if (commRank == root)
     {
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Reduce(
                 MPI_IN_PLACE, buf, count, TypeMap<Complex<T>>(), opC,
-                root, comm.comm));
+                root, comm.GetMPIComm()));
     }
     else
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Reduce(buf, 0, count, TypeMap<Complex<T>>(), opC,
-                       root, comm.comm));
+                       root, comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
-void Reduce(T* buf, int count, Op op, int root, Comm comm,
+void Reduce(T* buf, int count, Op op, int root, Comm const& comm,
             SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -296,22 +286,22 @@ void Reduce(T* buf, int count, Op op, int root, Comm comm,
 
     if (commRank == root)
         ReserveSerialized(count, buf, packedRecv);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce(
             packedSend.data(), packedRecv.data(), count, TypeMap<T>(), opC,
-            root, comm.comm));
+            root, comm.GetMPIComm()));
     if (commRank == root)
         Deserialize(count, packedRecv, buf);
 }
 
 template <typename T, Device D, typename, typename>
-void Reduce(T*, int, Op, int, Comm, SyncInfo<D> const&)
+void Reduce(T*, int, Op, int, Comm const&, SyncInfo<D> const&)
 {
     LogicError("Reduce: Bad device/type combination.");
 }
 
 template <typename T, Device D>
-void Reduce(T* buf, int count, int root, Comm comm,
+void Reduce(T* buf, int count, int root, Comm const& comm,
             SyncInfo<D> const& syncInfo)
 {
     Reduce(buf, count, SUM, root, std::move(comm), syncInfo);
@@ -319,13 +309,13 @@ void Reduce(T* buf, int count, int root, Comm comm,
 
 #define MPI_REDUCE_PROTO_DEV(T,D)                                       \
     template void Reduce(                                               \
-        T const*, T*, int, Op, int, Comm, SyncInfo<D> const&);          \
-    template void Reduce(T*, int, Op, int, Comm, SyncInfo<D> const&);   \
+        T const*, T*, int, Op, int, Comm const&, SyncInfo<D> const&);          \
+    template void Reduce(T*, int, Op, int, Comm const&, SyncInfo<D> const&);   \
     template void Reduce(                                               \
-        T const*, T*, int, int, Comm, SyncInfo<D> const&);              \
-    template T Reduce(T, Op, int, Comm, SyncInfo<D> const&);            \
-    template T Reduce(T, int, Comm, SyncInfo<D> const&);                \
-    template void Reduce(T*, int, int, Comm, SyncInfo<D> const&);
+        T const*, T*, int, int, Comm const&, SyncInfo<D> const&);              \
+    template T Reduce(T, Op, int, Comm const&, SyncInfo<D> const&);            \
+    template T Reduce(T, int, Comm const&, SyncInfo<D> const&);                \
+    template void Reduce(T*, int, int, Comm const&, SyncInfo<D> const&);
 
 #ifndef HYDROGEN_HAVE_CUDA
 #define MPI_REDUCE_PROTO(T)                     \

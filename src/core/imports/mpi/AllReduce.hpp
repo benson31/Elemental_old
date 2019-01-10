@@ -9,7 +9,7 @@ namespace mpi
 
 #ifdef HYDROGEN_HAVE_ALUMINUM
 template <typename T, Device D, typename>
-void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
+void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -18,18 +18,14 @@ void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
     if (count == 0)
         return;
 
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto syncHelper = MakeMultiSync(alSyncInfo, syncInfo);
     Al::Allreduce<Backend>(
         sbuf, rbuf, count, MPI_Op2ReductionOperator(NativeOp<T>(op)),
-        comm.template GetComm<Backend>());
+        comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
-void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
+void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -43,15 +39,15 @@ void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
 
     Synchronize(syncInfo);
 
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allreduce(
             const_cast<T*>(sbuf), rbuf,
-            count, TypeMap<T>(), NativeOp<T>(op), comm.comm));
+            count, TypeMap<T>(), NativeOp<T>(op), comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
 void AllReduce(Complex<T> const* sbuf, Complex<T>* rbuf, int count, Op op,
-               Comm comm, SyncInfo<D> const& syncInfo)
+               Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
 
@@ -68,28 +64,28 @@ void AllReduce(Complex<T> const* sbuf, Complex<T>* rbuf, int count, Op op,
 #ifdef EL_AVOID_COMPLEX_MPI
     if (op == SUM)
     {
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Allreduce(
                 const_cast<Complex<T>*>(sbuf), rbuf, 2*count,
-                TypeMap<T>(), NativeOp<T>(op), comm.comm));
+                TypeMap<T>(), NativeOp<T>(op), comm.GetMPIComm()));
     }
     else
     {
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Allreduce(
                 const_cast<Complex<T>*>(sbuf), rbuf, count,
-                TypeMap<Complex<T>>(), NativeOp<Complex<T>>(op), comm.comm));
+                TypeMap<Complex<T>>(), NativeOp<Complex<T>>(op), comm.GetMPIComm()));
     }
 #else
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allreduce(
             const_cast<Complex<T>*>(sbuf), rbuf, count,
-            TypeMap<Complex<T>>(), NativeOp<Complex<T>>(op), comm.comm));
+            TypeMap<Complex<T>>(), NativeOp<Complex<T>>(op), comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
-void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
+void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -107,15 +103,15 @@ void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
     Serialize(count, sbuf, packedSend);
 
     ReserveSerialized(count, rbuf, packedRecv);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allreduce(
             packedSend.data(), packedRecv.data(),
-            count, TypeMap<T>(), opC, comm.comm));
+            count, TypeMap<T>(), opC, comm.GetMPIComm()));
     Deserialize(count, packedRecv, rbuf);
 }
 
 template <typename T, Device D, typename, typename>
-void AllReduce(T const*, T*, int, Op, Comm, SyncInfo<D> const&)
+void AllReduce(T const*, T*, int, Op, Comm const&, SyncInfo<D> const&)
 {
     LogicError("AllReduce: Bad device/type combination.");
 }
@@ -127,7 +123,7 @@ void AllReduce(T const*, T*, int, Op, Comm, SyncInfo<D> const&)
 #ifdef HYDROGEN_HAVE_ALUMINUM
 template <typename T, Device D,
           typename/*=EnableIf<IsAluminumDeviceType<T,D>>*/>
-void AllReduce(T* buf, int count, Op op, Comm comm,
+void AllReduce(T* buf, int count, Op op, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -136,18 +132,14 @@ void AllReduce(T* buf, int count, Op op, Comm comm,
     if (count == 0)
         return;
 
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto syncHelper = MakeMultiSync(alSyncInfo, syncInfo);
     Al::Allreduce<Backend>(
         buf, count, MPI_Op2ReductionOperator(NativeOp<T>(op)),
-        comm.template GetComm<Backend>());
+        comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
-void AllReduce(T* buf, int count, Op op, Comm comm,
+void AllReduce(T* buf, int count, Op op, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -160,14 +152,14 @@ void AllReduce(T* buf, int count, Op op, Comm comm,
 
     Synchronize(syncInfo);
 
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allreduce(
             MPI_IN_PLACE, buf,
-            count, TypeMap<T>(), NativeOp<T>(op), comm.comm));
+            count, TypeMap<T>(), NativeOp<T>(op), comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
-void AllReduce(Complex<T>* buf, int count, Op op, Comm comm,
+void AllReduce(Complex<T>* buf, int count, Op op, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -183,29 +175,29 @@ void AllReduce(Complex<T>* buf, int count, Op op, Comm comm,
 #ifdef EL_AVOID_COMPLEX_MPI
     if (op == SUM)
     {
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Allreduce(
                 MPI_IN_PLACE, buf, 2*count,
-                TypeMap<T>(), NativeOp<T>(op), comm.comm));
+                TypeMap<T>(), NativeOp<T>(op), comm.GetMPIComm()));
     }
     else
     {
-        CheckMpi(
+        EL_CHECK_MPI_CALL(
             MPI_Allreduce(
                 MPI_IN_PLACE, buf, count, TypeMap<Complex<T>>(),
-                NativeOp<Complex<T>>(op), comm.comm));
+                NativeOp<Complex<T>>(op), comm.GetMPIComm()));
     }
 #else
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allreduce(
             MPI_IN_PLACE, buf, count,
             TypeMap<Complex<T>>(), NativeOp<Complex<T>>(op),
-            comm.comm));
+            comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
-void AllReduce(T* buf, int count, Op op, Comm comm,
+void AllReduce(T* buf, int count, Op op, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -223,44 +215,44 @@ void AllReduce(T* buf, int count, Op op, Comm comm,
     Serialize(count, buf, packedSend);
 
     ReserveSerialized(count, buf, packedRecv);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allreduce(
             packedSend.data(), packedRecv.data(),
-            count, TypeMap<T>(), opC, comm.comm));
+            count, TypeMap<T>(), opC, comm.GetMPIComm()));
     Deserialize(count, packedRecv, buf);
 }
 
 template <typename T, Device D, typename, typename>
-void AllReduce(T*, int, Op, Comm, SyncInfo<D> const&)
+void AllReduce(T*, int, Op, Comm const&, SyncInfo<D> const&)
 {
     LogicError("AllReduce: Bad device/type combination.");
 }
 
 template<typename T, Device D>
-void AllReduce(const T* sbuf, T* rbuf, int count, Comm comm, SyncInfo<D> const& syncInfo)
+void AllReduce(const T* sbuf, T* rbuf, int count, Comm const& comm, SyncInfo<D> const& syncInfo)
 { AllReduce(sbuf, rbuf, count, SUM, std::move(comm), syncInfo); }
 
 template<typename T, Device D>
-T AllReduce(T sb, Op op, Comm comm, SyncInfo<D> const& syncInfo)
+T AllReduce(T sb, Op op, Comm const& comm, SyncInfo<D> const& syncInfo)
 { T rb; AllReduce(&sb, &rb, 1, op, std::move(comm), syncInfo); return rb; }
 
 template<typename T, Device D>
-T AllReduce(T sb, Comm comm, SyncInfo<D> const& syncInfo)
+T AllReduce(T sb, Comm const& comm, SyncInfo<D> const& syncInfo)
 { return AllReduce(sb, SUM, std::move(comm), syncInfo); }
 
 template<typename T, Device D>
-void AllReduce(T* buf, int count, Comm comm, SyncInfo<D> const& syncInfo)
+void AllReduce(T* buf, int count, Comm const& comm, SyncInfo<D> const& syncInfo)
 { AllReduce(buf, count, SUM, std::move(comm), syncInfo); }
 
 #define MPI_ALLREDUCE_PROTO_DEV(T,D)                                    \
     template void AllReduce(                                            \
-        const T*, T*, int, Op, Comm, SyncInfo<D> const&);               \
-    template void AllReduce(T*, int, Op, Comm, SyncInfo<D> const&);     \
+        const T*, T*, int, Op, Comm const&, SyncInfo<D> const&);               \
+    template void AllReduce(T*, int, Op, Comm const&, SyncInfo<D> const&);     \
     template void AllReduce(                                            \
-        const T*, T*, int, Comm, SyncInfo<D> const&);                   \
-    template T AllReduce(T, Op, Comm, SyncInfo<D> const&);              \
-    template T AllReduce(T, Comm, SyncInfo<D> const&);                  \
-    template void AllReduce(T*, int, Comm, SyncInfo<D> const&);
+        const T*, T*, int, Comm const&, SyncInfo<D> const&);                   \
+    template T AllReduce(T, Op, Comm const&, SyncInfo<D> const&);              \
+    template T AllReduce(T, Comm const&, SyncInfo<D> const&);                  \
+    template void AllReduce(T*, int, Comm const&, SyncInfo<D> const&);
 
 #ifndef HYDROGEN_HAVE_CUDA
 #define MPI_ALLREDUCE_PROTO(T)             \

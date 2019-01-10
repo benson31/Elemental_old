@@ -143,6 +143,45 @@ struct BackendsForDeviceT<Device::GPU>
 template <Device D>
 using BackendsForDevice = typename BackendsForDeviceT<D>::type;
 
+#ifdef HYDROGEN_HAVE_CUDA
+using AllAluminumBackends = Join<BackendsForDevice<Device::CPU>,
+                                 BackendsForDevice<Device::GPU>>;
+#else
+using AllAluminumBackends = BackendsForDevice<Device::CPU>;
+#endif // HYDROGEN_HAVE_CUDA
+
+template <typename BackendT>
+struct DeviceForBackendT;
+
+template <>
+struct DeviceForBackendT<Al::MPIBackend>
+{
+    constexpr static Device value = Device::CPU;
+};
+
+#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_NCCL2
+template <>
+struct DeviceForBackendT<Al::NCCLBackend>
+{
+    constexpr static Device value = Device::GPU;
+};
+#endif // HYDROGEN_HAVE_NCCL2
+#ifdef HYDROGEN_HAVE_AL_MPI_CUDA
+template <>
+struct DeviceForBackendT<Al::MPICUDABackend>
+{
+    constexpr static Device value = Device::GPU;
+};
+#endif // HYDROGEN_HAVE_AL_MPI_CUDA
+#endif // HYDROGEN_HAVE_CUDA
+
+template <typename BackendT>
+constexpr Device DeviceForBackend()
+{
+    return DeviceForBackendT<BackendT>::value;
+}
+
 //
 // Aluminum-specific predicates/metafunctions
 //

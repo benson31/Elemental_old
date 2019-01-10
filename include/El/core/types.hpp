@@ -557,6 +557,17 @@ struct TailT<TypeList<T, Ts...>>
     using type = TypeList<Ts...>;
 };
 
+template <typename List1, typename List2> struct JoinT;
+
+template <typename... T1s, typename... T2s>
+struct JoinT<TypeList<T1s...>,TypeList<T2s...>>
+{
+    using type = TypeList<T1s..., T2s...>;
+};
+
+template <typename List1, typename List2>
+using Join = typename JoinT<List1, List2>::type;
+
 // Convenience Head/Tail functions
 template <typename T> using Head = typename HeadT<T>::type;
 template <typename T> using Tail = typename TailT<T>::type;

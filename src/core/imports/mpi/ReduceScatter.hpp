@@ -12,7 +12,7 @@ namespace mpi
 template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,
                                   Collectives::REDUCESCATTER>>*/>
-void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
+void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
                    SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -20,19 +20,14 @@ void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
         return;
 
     using Backend = BestBackend<T,D,Collective::REDUCESCATTER>;
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto syncHelper = MakeMultiSync(alSyncInfo, syncInfo);
-
     Al::Reduce_scatter<Backend>(
         sbuf, rbuf, count, MPI_Op2ReductionOperator(NativeOp<T>(op)),
-        comm.template GetComm<Backend>());
+        comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
-void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
+void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
                     SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -48,14 +43,14 @@ void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
 
     Synchronize(syncInfo);
 
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce_scatter_block(
-            sbuf, rbuf, count, TypeMap<T>(), NativeOp<T>(op), comm.comm));
+            sbuf, rbuf, count, TypeMap<T>(), NativeOp<T>(op), comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
 void ReduceScatter(Complex<T> const* sbuf, Complex<T>* rbuf,
-                   int count, Op op, Comm comm, SyncInfo<D> const& syncInfo)
+                   int count, Op op, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
     if (count == 0)
@@ -71,20 +66,20 @@ void ReduceScatter(Complex<T> const* sbuf, Complex<T>* rbuf,
     Synchronize(syncInfo);
 
 # ifdef EL_AVOID_COMPLEX_MPI
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce_scatter_block(
-            sbuf, rbuf, 2*count, TypeMap<T>(), NativeOp<T>(op), comm.comm));
+            sbuf, rbuf, 2*count, TypeMap<T>(), NativeOp<T>(op), comm.GetMPIComm()));
 # else
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce_scatter_block(
             sbuf, rbuf, count,
             TypeMap<Complex<T>>(), NativeOp<Complex<T>>(op),
-            comm.comm));
+            comm.GetMPIComm()));
 # endif
 }
 
 template <typename T, Device D, typename, typename, typename>
-void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
+void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
                    SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -106,16 +101,16 @@ void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm comm,
     Serialize(totalSend, sbuf, packedSend);
 
     ReserveSerialized(totalRecv, rbuf, packedRecv);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce_scatter_block(
             packedSend.data(), packedRecv.data(), count, TypeMap<T>(),
-            NativeOp<T>(op), comm.comm));
+            NativeOp<T>(op), comm.GetMPIComm()));
 
     Deserialize(totalRecv, packedRecv, rbuf);
 }
 
 template <typename T, Device D, typename, typename>
-void ReduceScatter(T const*, T*, int, Op, Comm, SyncInfo<D> const&)
+void ReduceScatter(T const*, T*, int, Op, Comm const&, SyncInfo<D> const&)
 {
     LogicError("ReduceScatter: Bad device/type combination.");
 }
@@ -128,7 +123,7 @@ void ReduceScatter(T const*, T*, int, Op, Comm, SyncInfo<D> const&)
 template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,
                                   Collectives::REDUCESCATTER>>*/>
-void ReduceScatter(T* buf, int count, Op op, Comm comm,
+void ReduceScatter(T* buf, int count, Op op, Comm const& comm,
                    SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -136,19 +131,14 @@ void ReduceScatter(T* buf, int count, Op op, Comm comm,
         return;
 
     using Backend = BestBackend<T,D,Collective::REDUCESCATTER>;
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto syncHelper = MakeMultiSync(alSyncInfo, syncInfo);
-
     Al::Reduce_scatter<Backend>(
         buf, count, MPI_Op2ReductionOperator(NativeOp<T>(op)),
-        comm.template GetComm<Backend>());
+        comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
-void ReduceScatter(T* buf, int count, Op op, Comm comm,
+void ReduceScatter(T* buf, int count, Op op, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -163,14 +153,14 @@ void ReduceScatter(T* buf, int count, Op op, Comm comm,
 
     Synchronize(syncInfo);
 
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce_scatter_block(
             MPI_IN_PLACE, buf, count,
-            TypeMap<T>(), NativeOp<T>(op), comm.comm));
+            TypeMap<T>(), NativeOp<T>(op), comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
-void ReduceScatter(Complex<T>* buf, int count, Op op, Comm comm,
+void ReduceScatter(Complex<T>* buf, int count, Op op, Comm const& comm,
                    SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -186,21 +176,21 @@ void ReduceScatter(Complex<T>* buf, int count, Op op, Comm comm,
     Synchronize(syncInfo);
 
 #ifdef EL_AVOID_COMPLEX_MPI
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce_scatter_block(
             MPI_IN_PLACE, buf, 2*count,
-            TypeMap<T>(), NativeOp<T>(op), comm.comm));
+            TypeMap<T>(), NativeOp<T>(op), comm.GetMPIComm()));
 #else
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce_scatter_block(
             MPI_IN_PLACE, buf, count,
             TypeMap<Complex<T>>(),
-            NativeOp<Complex<T>>(op), comm.comm));
+            NativeOp<Complex<T>>(op), comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
-void ReduceScatter(T* buf, int count, Op op, Comm comm,
+void ReduceScatter(T* buf, int count, Op op, Comm const& comm,
                    SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -221,16 +211,16 @@ void ReduceScatter(T* buf, int count, Op op, Comm comm,
     Serialize(totalSend, buf, packedSend);
 
     ReserveSerialized(totalRecv, buf, packedRecv);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Reduce_scatter_block(
             packedSend.data(), packedRecv.data(), count, TypeMap<T>(),
-            NativeOp<T>(op), comm.comm));
+            NativeOp<T>(op), comm.GetMPIComm()));
 
     Deserialize(totalRecv, packedRecv, buf);
 }
 
 template <typename T, Device D, typename, typename>
-void ReduceScatter(T*, int, Op, Comm, SyncInfo<D> const&)
+void ReduceScatter(T*, int, Op, Comm const&, SyncInfo<D> const&)
 {
     LogicError("ReduceScatter: Bad device/type combination.");
 }
@@ -240,39 +230,39 @@ void ReduceScatter(T*, int, Op, Comm, SyncInfo<D> const&)
 //
 
 template <typename T, Device D>
-void ReduceScatter(T const* sbuf, T* rbuf, int rc, Comm comm,
+void ReduceScatter(T const* sbuf, T* rbuf, int rc, Comm const& comm,
                    SyncInfo<D> const& syncInfo)
 {
     ReduceScatter(sbuf, rbuf, rc, SUM, comm, syncInfo);
 }
 
 template <typename T, Device D>
-T ReduceScatter(T sb, Op op, Comm comm, SyncInfo<D> const& syncInfo)
+T ReduceScatter(T sb, Op op, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     T rb; ReduceScatter(&sb, &rb, 1, op, comm, syncInfo); return rb;
 }
 
 template <typename T, Device D>
-T ReduceScatter(T sb, Comm comm, SyncInfo<D> const& syncInfo)
+T ReduceScatter(T sb, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     return ReduceScatter(sb, SUM, comm, syncInfo);
 }
 
 template <typename T, Device D>
-void ReduceScatter(T* buf, int rc, Comm comm, SyncInfo<D> const& syncInfo)
+void ReduceScatter(T* buf, int rc, Comm const& comm, SyncInfo<D> const& syncInfo)
 {
     ReduceScatter(buf, rc, SUM, comm, syncInfo);
 }
 
 #define MPI_REDUCESCATTER_PROTO_DEV(T,D)                                \
-    template void ReduceScatter(T const*, T*, int rc, Op op, Comm,      \
+    template void ReduceScatter(T const*, T*, int rc, Op op, Comm const&,      \
                                 SyncInfo<D> const&);                    \
-    template void ReduceScatter(T*, int, Op, Comm, SyncInfo<D> const&); \
-    template void ReduceScatter(T const*, T*, int rc, Comm,             \
+    template void ReduceScatter(T*, int, Op, Comm const&, SyncInfo<D> const&); \
+    template void ReduceScatter(T const*, T*, int rc, Comm const&,             \
                                 SyncInfo<D> const&);                    \
-    template T ReduceScatter(T, Op, Comm, SyncInfo<D> const&);          \
-    template T ReduceScatter(T, Comm, SyncInfo<D> const&);              \
-    template void ReduceScatter(T*, int, Comm, SyncInfo<D> const&);
+    template T ReduceScatter(T, Op, Comm const&, SyncInfo<D> const&);          \
+    template T ReduceScatter(T, Comm const&, SyncInfo<D> const&);              \
+    template void ReduceScatter(T*, int, Comm const&, SyncInfo<D> const&);
 
 #ifndef HYDROGEN_HAVE_CUDA
 #define MPI_REDUCESCATTER_PROTO(T)             \

@@ -8,7 +8,7 @@ namespace mpi
 #ifdef HYDROGEN_HAVE_ALUMINUM
 template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,COLL>>*/>
-void AllToAll(T const* sbuf, int /*sc*/, T* rbuf, int rc, Comm comm,
+void AllToAll(T const* sbuf, int /*sc*/, T* rbuf, int rc, Comm const& comm,
               SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -16,18 +16,13 @@ void AllToAll(T const* sbuf, int /*sc*/, T* rbuf, int rc, Comm comm,
         return;
 
     using Backend = BestBackend<T,D,Collective::ALLTOALL>;
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto syncHelper = MakeMultiSync(alSyncInfo, syncInfo);
-
     Al::Alltoall<Backend>(
-        sbuf, rbuf, rc, comm.template GetComm<Backend>());
+        sbuf, rbuf, rc, comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
-void AllToAll(T const* sbuf, int sc, T* rbuf, int rc, Comm comm,
+void AllToAll(T const* sbuf, int sc, T* rbuf, int rc, Comm const& comm,
               SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -40,15 +35,15 @@ void AllToAll(T const* sbuf, int sc, T* rbuf, int rc, Comm comm,
 #endif
 
     Synchronize(syncInfo);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Alltoall(
             sbuf, sc, TypeMap<T>(),
-            rbuf, rc, TypeMap<T>(), comm.comm));
+            rbuf, rc, TypeMap<T>(), comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
 void AllToAll(Complex<T> const* sbuf,
-              int sc, Complex<T>* rbuf, int rc, Comm comm,
+              int sc, Complex<T>* rbuf, int rc, Comm const& comm,
               SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -63,24 +58,24 @@ void AllToAll(Complex<T> const* sbuf,
     Synchronize(syncInfo);
 
 #ifdef EL_AVOID_COMPLEX_MPI
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Alltoall(
             const_cast<Complex<T>*>(sbuf),
             2*sc, TypeMap<T>(),
             rbuf,
-            2*rc, TypeMap<T>(), comm.comm));
+            2*rc, TypeMap<T>(), comm.GetMPIComm()));
 #else
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Alltoall(
             const_cast<Complex<T>*>(sbuf),
             sc, TypeMap<Complex<T>>(),
             rbuf,
-            rc, TypeMap<Complex<T>>(), comm.comm));
+            rc, TypeMap<Complex<T>>(), comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
-void AllToAll(T const* sbuf, int sc, T* rbuf, int rc, Comm comm,
+void AllToAll(T const* sbuf, int sc, T* rbuf, int rc, Comm const& comm,
               SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -99,21 +94,21 @@ void AllToAll(T const* sbuf, int sc, T* rbuf, int rc, Comm comm,
     std::vector<byte> packedSend, packedRecv;
     Serialize(totalSend, sbuf, packedSend);
     ReserveSerialized(totalRecv, rbuf, packedRecv);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Alltoall(
             packedSend.data(), sc, TypeMap<T>(),
-            packedRecv.data(), rc, TypeMap<T>(), comm.comm));
+            packedRecv.data(), rc, TypeMap<T>(), comm.GetMPIComm()));
     Deserialize(totalRecv, packedRecv, rbuf);
 }
 
 template <typename T, Device D, typename, typename>
-void AllToAll(T const*, int, T*, int, Comm, SyncInfo<D> const&)
+void AllToAll(T const*, int, T*, int, Comm const&, SyncInfo<D> const&)
 {
     LogicError("AllToAll: Bad device/type combination.");
 }
 
 #define MPI_ALLTOALL_PROTO_DEV(T,D) \
-    template void AllToAll(T const*, int, T*, int, Comm, SyncInfo<D> const&);
+    template void AllToAll(T const*, int, T*, int, Comm const&, SyncInfo<D> const&);
 
 #ifndef HYDROGEN_HAVE_CUDA
 #define MPI_ALLTOALL_PROTO(T)             \

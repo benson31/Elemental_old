@@ -10,23 +10,19 @@ namespace mpi
 #ifdef HYDROGEN_HAVE_ALUMINUM
 template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,COLL>>*/>
-void Broadcast(T* buffer, int count, int root, Comm comm,
+void Broadcast(T* buffer, int count, int root, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::BROADCAST>;
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-    auto multisync = MakeMultiSync(alSyncInfo, syncInfo);
-
     Al::Bcast<Backend>(
-        buffer, count, root, comm.template GetComm<Backend>());
+        buffer, count, root, comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
-void Broadcast(T* buffer, int count, int root, Comm comm,
+void Broadcast(T* buffer, int count, int root, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -45,11 +41,11 @@ void Broadcast(T* buffer, int count, int root, Comm comm,
 
     Synchronize(syncInfo);// NOOP on CPU,
                           // cudaStreamSynchronize on GPU.
-    CheckMpi(MPI_Bcast(buffer, count, TypeMap<T>(), root, comm.comm));
+    EL_CHECK_MPI_CALL(MPI_Bcast(buffer, count, TypeMap<T>(), root, comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
-void Broadcast(Complex<T>* buffer, int count, int root, Comm comm,
+void Broadcast(Complex<T>* buffer, int count, int root, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -69,14 +65,14 @@ void Broadcast(Complex<T>* buffer, int count, int root, Comm comm,
     Synchronize(syncInfo);
 
 #ifdef EL_AVOID_COMPLEX_MPI
-    CheckMpi(MPI_Bcast(buffer, 2*count, TypeMap<T>(), root, comm.comm));
+    EL_CHECK_MPI_CALL(MPI_Bcast(buffer, 2*count, TypeMap<T>(), root, comm.GetMPIComm()));
 #else
-    CheckMpi(MPI_Bcast(buffer, count, TypeMap<Complex<T>>(), root, comm.comm));
+    EL_CHECK_MPI_CALL(MPI_Bcast(buffer, count, TypeMap<Complex<T>>(), root, comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
-void Broadcast(T* buffer, int count, int root, Comm comm,
+void Broadcast(T* buffer, int count, int root, Comm const& comm,
                SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -97,23 +93,23 @@ void Broadcast(T* buffer, int count, int root, Comm comm,
 
     std::vector<byte> packedBuf;
     Serialize(count, buffer, packedBuf);
-    CheckMpi(MPI_Bcast(packedBuf.data(), count, TypeMap<T>(), root, comm.comm));
+    EL_CHECK_MPI_CALL(MPI_Bcast(packedBuf.data(), count, TypeMap<T>(), root, comm.GetMPIComm()));
     Deserialize(count, packedBuf, buffer);
 }
 
 template <typename T, Device D, typename, typename>
-void Broadcast(T*, int, int, Comm, SyncInfo<D> const&)
+void Broadcast(T*, int, int, Comm const&, SyncInfo<D> const&)
 {
     LogicError("Broadcast: Bad device/type combination.");
 }
 
 template <typename T, Device D>
-void Broadcast( T& b, int root, Comm comm, SyncInfo<D> const& syncInfo )
+void Broadcast( T& b, int root, Comm const& comm, SyncInfo<D> const& syncInfo )
 { Broadcast( &b, 1, root, std::move(comm), syncInfo ); }
 
 #define MPI_BROADCAST_PROTO_DEV(T,D)                                    \
-    template void Broadcast(T*, int, int, Comm, SyncInfo<D> const&);       \
-    template void Broadcast(T&, int, Comm, SyncInfo<D> const&);
+    template void Broadcast(T*, int, int, Comm const&, SyncInfo<D> const&);       \
+    template void Broadcast(T&, int, Comm const&, SyncInfo<D> const&);
 
 #ifndef HYDROGEN_HAVE_CUDA
 #define MPI_BROADCAST_PROTO(T)                  \

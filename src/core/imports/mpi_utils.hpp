@@ -17,36 +17,7 @@
 #ifndef EL_IMPORTS_MPIUTILS_HPP
 #define EL_IMPORTS_MPIUTILS_HPP
 
-#ifdef HYDROGEN_HAVE_CUDA
-#include <El/core/imports/cuda.hpp>
-#define EL_CHECK_MPI(mpi_call)                                          \
-    do                                                                  \
-    {                                                                   \
-       EL_CHECK_CUDA(cudaStreamSynchronize(GPUManager::Stream()));      \
-       CheckMpi( mpi_call );                                            \
-    }                                                                   \
-    while( 0 )
-#else
-#define EL_CHECK_MPI(mpi_call) CheckMpi( mpi_call )
-#endif
-
-#define EL_CHECK_MPI_NO_DATA(mpi_call) CheckMpi( mpi_call )
-
 namespace {
-
-inline void
-CheckMpi( int error ) EL_NO_RELEASE_EXCEPT
-{
-    EL_DEBUG_ONLY(
-      if( error != MPI_SUCCESS )
-      {
-          char errorString[MPI_MAX_ERROR_STRING];
-          int lengthOfErrorString;
-          MPI_Error_string( error, errorString, &lengthOfErrorString );
-          El::RuntimeError( std::string(errorString) );
-      }
-    )
-}
 
 template<typename T>
 MPI_Op NativeOp( const El::mpi::Op& op )

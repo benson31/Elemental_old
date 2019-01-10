@@ -9,28 +9,20 @@ namespace mpi
 template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,COLL>>*/>
 void AllGather(
-    const T* sbuf, int sc, T* rbuf, int rc, Comm comm,
+    const T* sbuf, int sc, T* rbuf, int rc, Comm const& comm,
     SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
     AUTO_PROFILE_REGION("MPI.AllGather.Al", syncInfo);
     using Backend = BestBackend<T,D,Collective::ALLGATHER>;
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto multisync = MakeMultiSync(alSyncInfo, syncInfo);
-
-    {
-        AUTO_NOSYNC_PROFILE_REGION("Al.Allgather");
-        Al::Allgather<Backend>(
-            sbuf, rbuf, sc, comm.template GetComm<Backend>());
-    }
+    Al::Allgather<Backend>(
+        sbuf, rbuf, sc, comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
 void AllGather(
-    const T* sbuf, int sc, T* rbuf, int rc, Comm comm,
+    const T* sbuf, int sc, T* rbuf, int rc, Comm const& comm,
     SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -48,24 +40,24 @@ void AllGather(
     LogicError("AllGather: Let Tom know if you go down this code path.");
 
     using UCP = unsigned char*;
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allgather(
             reinterpret_cast<UCP>(const_cast<T*>(sbuf)),
             sizeof(T)*sc, MPI_UNSIGNED_CHAR,
             reinterpret_cast<UCP>(rbuf),
             sizeof(T)*rc, MPI_UNSIGNED_CHAR,
-            comm.comm));
+            comm.GetMPIComm()));
 #else
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allgather(
-            sbuf, sc, TypeMap<T>(), rbuf, rc, TypeMap<T>(), comm.comm));
+            sbuf, sc, TypeMap<T>(), rbuf, rc, TypeMap<T>(), comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
 void AllGather(
     Complex<T> const* sbuf, int sc,
-    Complex<T>* rbuf, int rc, Comm comm,
+    Complex<T>* rbuf, int rc, Comm const& comm,
     SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -81,31 +73,31 @@ void AllGather(
 
 #ifdef EL_USE_BYTE_ALLGATHERS
     LogicError("AllGather: Let Tom know if you go down this code path.");
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allgather(
             reinterpret_cast<UCP>(const_cast<Complex<T>*>(sbuf)),
             2*sizeof(T)*sc, MPI_UNSIGNED_CHAR,
             reinterpret_cast<UCP>(rbuf),
             2*sizeof(T)*rc, MPI_UNSIGNED_CHAR,
-            comm.comm));
+            comm.GetMPIComm()));
 #else
 #ifdef EL_AVOID_COMPLEX_MPI
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allgather(
             sbuf, 2*sc, TypeMap<T>(), rbuf, 2*rc,
-            TypeMap<T>(), comm.comm));
+            TypeMap<T>(), comm.GetMPIComm()));
 #else
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allgather(
             sbuf, sc, TypeMap<Complex<T>>(),
-            rbuf, rc, TypeMap<Complex<T>>(), comm.comm));
+            rbuf, rc, TypeMap<Complex<T>>(), comm.GetMPIComm()));
 #endif
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
 void AllGather(
-    T const* sbuf, int sc, T* rbuf, int rc, Comm comm,
+    T const* sbuf, int sc, T* rbuf, int rc, Comm const& comm,
     SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -123,22 +115,22 @@ void AllGather(
     Serialize(sc, sbuf, packedSend);
 
     ReserveSerialized(totalRecv, rbuf, packedRecv);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Allgather(
             packedSend.data(), sc, TypeMap<T>(),
-            packedRecv.data(), rc, TypeMap<T>(), comm.comm));
+            packedRecv.data(), rc, TypeMap<T>(), comm.GetMPIComm()));
     Deserialize(totalRecv, packedRecv, rbuf);
 }
 
 template <typename T, Device D, typename, typename>
 void AllGather(
-    T const*, int, T*, int, Comm, SyncInfo<D> const&)
+    T const*, int, T*, int, Comm const&, SyncInfo<D> const&)
 {
     LogicError("AllGather: Bad device/type combination.");
 }
 
 #define MPI_ALLGATHER_PROTO_DEV(T,D) \
-    template void AllGather(const T* sbuf, int sc, T* rbuf, int rc, Comm comm, \
+    template void AllGather(const T* sbuf, int sc, T* rbuf, int rc, Comm const& comm, \
                             SyncInfo<D> const&);
 
 #ifndef HYDROGEN_HAVE_CUDA

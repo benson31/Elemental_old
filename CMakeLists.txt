@@ -55,8 +55,10 @@ endif (__GIT_EXECUTABLE)
 set(HYDROGEN_VERSION_MAJOR 1)
 set(HYDROGEN_VERSION_MINOR 1)
 set(HYDROGEN_VERSION_PATCH 0)
+set(HYDROGEN_VERSION_MAJOR_MINOR
+    "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
-  "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}.${HYDROGEN_VERSION_PATCH}")
+  "${HYDROGEN_VERSION_MAJOR_MINOR}.${HYDROGEN_VERSION_PATCH}")
 
 # Back-compatibility, until it's all sorted out
 set(EL_VERSION_MAJOR ${HYDROGEN_VERSION_MAJOR})
@@ -84,48 +86,70 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 # Add warning flags
 include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag("-pedantic" CXX_COMPILER_HAS_PEDANTIC_FLAG)
-check_cxx_compiler_flag("-Wpedantic" CXX_COMPILER_HAS_WPEDANTIC_FLAG)
+macro (add_cxx_flag_as_library FLAG_LIST_VAR FLAG)
+  add_library(flag${FLAG} INTERFACE)
+  target_compile_options(
+    flag${FLAG} INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
+  LIST(APPEND ${FLAG_LIST_VAR} flag${FLAG})
+endmacro()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+LIST(APPEND INITIAL_CXX_FLAGS
+  "-Wall" "-Wextra" "-Wno-unused-parameter")
+
+# Check all the CXX flags
+foreach (flag IN LISTS INITIAL_CXX_FLAGS)
+  check_cxx_compiler_flag("${flag}" CXX_COMPILER_HAS_FLAG${flag})
+  if (CXX_COMPILER_HAS_FLAG${flag})
+    add_cxx_flag_as_library(EXTRA_CXX_FLAGS "${flag}")
+  endif ()
+endforeach ()
+
+# No sense having both, but some compilers support both. Probably overkill.
+check_cxx_compiler_flag("-pedantic" CXX_COMPILER_HAS_PEDANTIC_FLAG)
 if (CXX_COMPILER_HAS_PEDANTIC_FLAG)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic")
-elseif (CXX_COMPILER_HAS_WPEDANTIC_FLAG)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wpedantic")
+  add_cxx_flag_as_library(EXTRA_CXX_FLAGS "-pedantic")
+else ()
+  check_cxx_compiler_flag("-Wpedantic" CXX_COMPILER_HAS_WPEDANTIC_FLAG)
+  if (CXX_COMPILER_HAS_WPEDANTIC_FLAG)
+    add_cxx_flag_as_library(EXTRA_CXX_FLAGS "-Wpedantic")
+  endif ()
 endif ()
 
 # Configuration options
-option(${PROJECT_NAME}_EXPORT_PACKAGE_REGISTRY
+option(Hydrogen_EXPORT_PACKAGE_REGISTRY
   "Export the build directory to the user's CMake package registry." OFF)
-if (NOT ${PROJECT_NAME}_EXPORT_PACKAGE_REGISTRY)
+if (NOT Hydrogen_EXPORT_PACKAGE_REGISTRY)
   set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
 endif ()
 
 option(CMAKE_POSITION_INDEPENDENT_CODE
   "Build using position-independent code" ON)
 
-option(${PROJECT_NAME}_ENABLE_TESTING "Build the test suite." ON)
+option(CMAKE_INTERPROCEDURAL_OPTIMIZATION
+  "Build Hydrogen with interprocedural optimization enabled" OFF)
 
-option(${PROJECT_NAME}_ENABLE_QUADMATH
+option(Hydrogen_ENABLE_TESTING "Build the test suite." ON)
+
+option(Hydrogen_ENABLE_QUADMATH
   "Search for quadmath library and enable related features if found." OFF)
 
-option(${PROJECT_NAME}_ENABLE_QD
+option(Hydrogen_ENABLE_QD
   "Search for QD library and enable related features if found." OFF)
 
-option(${PROJECT_NAME}_ENABLE_MPC
+option(Hydrogen_ENABLE_MPC
   "Search for MPC(+MPFR+GMP) library and enable related features if found."
   OFF)
 
-option(${PROJECT_NAME}_ENABLE_ALUMINUM
+option(Hydrogen_ENABLE_ALUMINUM
   "Enable the Aluminum package for improved Allreduces."
   OFF)
 
-option(${PROJECT_NAME}_ENABLE_CUDA
+option(Hydrogen_ENABLE_CUDA
   "Search for CUDA support and enable related features if found."
   OFF)
 
-if (${PROJECT_NAME}_ENABLE_CUDA)
-  option(${PROJECT_NAME}_ENABLE_CUB
+if (Hydrogen_ENABLE_CUDA)
+  option(Hydrogen_ENABLE_CUB
     "Search for CUB support and enable related features if found."
     ON)
 endif ()
@@ -134,44 +158,44 @@ endif ()
 # MEMORY-RELATED OPTIONS
 #
 
-option(${PROJECT_NAME}_USE_64BIT_INTS
+option(Hydrogen_USE_64BIT_INTS
   "Use 64-bit integers for internal indexing" OFF)
-option(${PROJECT_NAME}_USE_64BIT_BLAS_INTS
+option(Hydrogen_USE_64BIT_BLAS_INTS
   "Use 64-bit integers for BLAS/LAPACK" OFF)
-if (${PROJECT_NAME}_USE_64BIT_BLAS_INTS)
+if (Hydrogen_USE_64BIT_BLAS_INTS)
   set(EL_USE_64BIT_BLAS_INTS ON)
-  set(${PROJECT_NAME}_USE_64BIT_INTS ON)
+  set(Hydrogen_USE_64BIT_INTS ON)
 endif ()
 
-if (${PROJECT_NAME}_USE_64BIT_INTS)
+if (Hydrogen_USE_64BIT_INTS)
   set(EL_USE_64BIT_INTS ON)
 endif ()
 
-option(${PROJECT_NAME}_ZERO_INIT "Initialize buffers to zero by default?" OFF)
-mark_as_advanced(${PROJECT_NAME}_ZERO_INIT)
-if (${PROJECT_NAME}_ZERO_INIT)
-  set(EL_ZERO_INIT ${${PROJECT_NAME}_ZERO_INIT})
+option(Hydrogen_ZERO_INIT "Initialize buffers to zero by default?" OFF)
+mark_as_advanced(Hydrogen_ZERO_INIT)
+if (Hydrogen_ZERO_INIT)
+  set(EL_ZERO_INIT ${Hydrogen_ZERO_INIT})
 endif ()
 
-option(${PROJECT_NAME}_ENABLE_VALGRIND
+option(Hydrogen_ENABLE_VALGRIND
   "Search for valgrind and enable related features" OFF)
-mark_as_advanced(${PROJECT_NAME}_ENABLE_VALGRIND)
-if (${PROJECT_NAME}_ENABLE_VALGRIND)
-  set(EL_ENABLE_VALGRIND ${${PROJECT_NAME}_ENABLE_VALGRIND})
+mark_as_advanced(Hydrogen_ENABLE_VALGRIND)
+if (Hydrogen_ENABLE_VALGRIND)
+  set(EL_ENABLE_VALGRIND ${Hydrogen_ENABLE_VALGRIND})
 endif ()
 
 #
 # Profiling
 #
 
-option(${PROJECT_NAME}_ENABLE_NVPROF
+option(Hydrogen_ENABLE_NVPROF
   "Search for NVProf and enable related features" OFF)
-option(${PROJECT_NAME}_ENABLE_VTUNE
+option(Hydrogen_ENABLE_VTUNE
   "Search for VTune and enable related features" OFF)
-option(${PROEJCT_NAME}_ENABLE_SYNCHRONOUS_PROFILING
+option(Hydrogen_ENABLE_SYNCHRONOUS_PROFILING
   "Perform compute-stream synchronization before beginning profile regions"
   OFF)
-if (${PROJECT_NAME}_ENABLE_SYNCHRONOUS_PROFILING)
+if (Hydrogen_ENABLE_SYNCHRONOUS_PROFILING)
   set(HYDROGEN_DEFAULT_SYNC_PROFILING TRUE)
 endif ()
 
@@ -179,11 +203,11 @@ endif ()
 # OpenMP
 #
 
-option(${PROJECT_NAME}_ENABLE_OPENMP
+option(Hydrogen_ENABLE_OPENMP
   "Enable OpenMP support in Hydrogen" OFF)
 
-if (${PROJECT_NAME}_ENABLE_OPENMP)
-  option(${PROJECT_NAME}_ENABLE_OMP_TASKLOOP
+if (Hydrogen_ENABLE_OPENMP)
+  option(Hydrogen_ENABLE_OMP_TASKLOOP
     "Use taskloops instead of parallel for" OFF)
 endif ()
 
@@ -193,35 +217,35 @@ endif ()
 
 # CUDA-aware MPI can provide a benefit, if it works. However, it is
 # often buggy. We can avoid it by setting this to ON
-option(${PROJECT_NAME}_AVOID_CUDA_AWARE_MPI "Avoid CUDA-aware MPI" OFF)
+option(Hydrogen_AVOID_CUDA_AWARE_MPI "Avoid CUDA-aware MPI" OFF)
 
-option(${PROJECT_NAME}_USE_CUSTOM_ALLTOALLV
+option(Hydrogen_USE_CUSTOM_ALLTOALLV
   "Avoid MPI_Alltoallv for performance reasons" OFF)
-mark_as_advanced(${PROJECT_NAME}_USE_CUSTOM_ALLTOALLV)
-if (${PROJECT_NAME}_USE_CUSTOM_ALLTOALLV)
-  set(EL_USE_CUSTOM_ALLTOALLV ${${PROJECT_NAME}_USE_CUSTOM_ALLTOALLV})
+mark_as_advanced(Hydrogen_USE_CUSTOM_ALLTOALLV)
+if (Hydrogen_USE_CUSTOM_ALLTOALLV)
+  set(EL_USE_CUSTOM_ALLTOALLV ${Hydrogen_USE_CUSTOM_ALLTOALLV})
 endif ()
 
 # Since it is surprisingly common for MPI libraries to have bugs in
 # their support for complex data, the following option forces
 # Elemental to cast all possible MPI communications in terms of twice
 # as many real units of data.
-option(${PROJECT_NAME}_AVOID_COMPLEX_MPI
+option(Hydrogen_AVOID_COMPLEX_MPI
   "Avoid potentially buggy complex MPI routines" OFF)
-mark_as_advanced(${PROJECT_NAME}_AVOID_COMPLEX_MPI)
-if (${PROJECT_NAME}_AVOID_COMPLEX_MPI)
-  set(EL_AVOID_COMPLEX_MPI ${${PROJECT_NAME}_AVOID_COMPLEX_MPI})
+mark_as_advanced(Hydrogen_AVOID_COMPLEX_MPI)
+if (Hydrogen_AVOID_COMPLEX_MPI)
+  set(EL_AVOID_COMPLEX_MPI ${Hydrogen_AVOID_COMPLEX_MPI})
 endif ()
 
 # Due to a subtle flaw in the Blue Gene/P extensions for MPICH2,
 # treating floating-point data as a collection of byte-sized objects
 # results in a better algorithm being chosen for MPI_Allgather. This
 # should not effect performance on most machines.
-option(${PROJECT_NAME}_USE_BYTE_ALLGATHERS
+option(Hydrogen_USE_BYTE_ALLGATHERS
   "Avoid BG/P allgather performance bug." OFF)
-mark_as_advanced(${PROJECT_NAME}_USE_BYTE_ALLGATHERS)
-if (${PROJECT_NAME}_USE_BYTE_ALLGATHERS)
-  set(EL_USE_BYTE_ALLGATHERS ${${PROJECT_NAME}_USE_BYTE_ALLGATHERS})
+mark_as_advanced(Hydrogen_USE_BYTE_ALLGATHERS)
+if (Hydrogen_USE_BYTE_ALLGATHERS)
+  set(EL_USE_BYTE_ALLGATHERS ${Hydrogen_USE_BYTE_ALLGATHERS})
 endif ()
 
 #
@@ -230,38 +254,38 @@ endif ()
 
 # Print a warning any time a redistribution is performed which unpacks
 # a large amount of data with a non-unit stride
-option(${PROJECT_NAME}_CACHE_WARNINGS
+option(Hydrogen_CACHE_WARNINGS
   "Warns when using cache-unfriendly routines" OFF)
-mark_as_advanced(${PROJECT_NAME}_CACHE_WARNINGS)
-if (${PROJECT_NAME}_CACHE_WARNINGS)
-  set(EL_CACHE_WARNINGS ${${PROJECT_NAME}_CACHE_WARNINGS})
+mark_as_advanced(Hydrogen_CACHE_WARNINGS)
+if (Hydrogen_CACHE_WARNINGS)
+  set(EL_CACHE_WARNINGS ${Hydrogen_CACHE_WARNINGS})
 endif ()
 
 # Print a warning when an improperly aligned redistribution is
 # performed, i.e., if an unnecessary permutation communication stage
 # must take place
-option(${PROJECT_NAME}_UNALIGNED_WARNINGS
+option(Hydrogen_UNALIGNED_WARNINGS
   "Warn when performing unaligned redistributions" OFF)
-mark_as_advanced(${PROJECT_NAME}_UNALIGNED_WARNINGS)
-if (${PROJECT_NAME}_CACHE_WARNINGS)
-  set(EL_CACHE_WARNINGS ${${PROJECT_NAME}_UNALIGNED_WARNINGS})
+mark_as_advanced(Hydrogen_UNALIGNED_WARNINGS)
+if (Hydrogen_CACHE_WARNINGS)
+  set(EL_CACHE_WARNINGS ${Hydrogen_UNALIGNED_WARNINGS})
 endif ()
 
 # Print a warning if an opportunity was missed to implement a
 # redistribution approach specifically for vectors (instead of
 # matrices)
-option(${PROJECT_NAME}_VECTOR_WARNINGS
+option(Hydrogen_VECTOR_WARNINGS
   "Warn when vector redistribution chances are missed" OFF)
-mark_as_advanced(${PROJECT_NAME}_VECTOR_WARNINGS)
-if (${PROJECT_NAME}_VECTOR_WARNINGS)
-  set(EL_VECTOR_WARNINGS ${${PROJECT_NAME}_VECTOR_WARNINGS})
+mark_as_advanced(Hydrogen_VECTOR_WARNINGS)
+if (Hydrogen_VECTOR_WARNINGS)
+  set(EL_VECTOR_WARNINGS ${Hydrogen_VECTOR_WARNINGS})
 endif ()
 
 #
 # Check the compiler features
 #
 
-if (${PROJECT_NAME}_ENABLE_CUDA)
+if (Hydrogen_ENABLE_CUDA)
 
   include(CheckLanguage)
   check_language(CUDA)
@@ -277,14 +301,14 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
     find_package(CUDA REQUIRED) # Enable all the macros
     find_package(NVML REQUIRED)
 
-    if (${PROJECT_NAME}_ENABLE_CUB)
+    if (Hydrogen_ENABLE_CUB)
       find_package(CUB REQUIRED)
       set(HYDROGEN_HAVE_CUB TRUE)
     else ()
       set(HYDROGEN_HAVE_CUB FALSE)
     endif ()
 
-    if (${PROJECT_NAME}_ENABLE_NVPROF)
+    if (Hydrogen_ENABLE_NVPROF)
       find_package(NVTX REQUIRED)
       set(HYDROGEN_HAVE_NVPROF TRUE)
     else ()
@@ -319,14 +343,14 @@ if (${PROJECT_NAME}_ENABLE_CUDA)
 
     message(FATAL_ERROR
       "CUDA support not found. Disabling CUDA the features.")
-    set(${PROJECT_NAME}_ENABLE_CUDA FALSE)
+    set(Hydrogen_ENABLE_CUDA FALSE)
     set(HYDROGEN_HAVE_CUDA FALSE)
 
   endif ()
 
-endif (${PROJECT_NAME}_ENABLE_CUDA)
+endif (Hydrogen_ENABLE_CUDA)
 
-if (${PROJECT_NAME}_ENABLE_ALUMINUM)
+if (Hydrogen_ENABLE_ALUMINUM)
   find_package(Aluminum)
 
   if (Aluminum_FOUND)
@@ -350,10 +374,10 @@ if (${PROJECT_NAME}_ENABLE_ALUMINUM)
     set(HYDROGEN_HAVE_ALUMINUM FALSE)
     set(HYDROGEN_HAVE_NCCL2 FALSE)
     set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
-    set(${PROJECT_NAME}_ENABLE_ALUMINUM FALSE)
+    set(Hydrogen_ENABLE_ALUMINUM FALSE)
     message(WARNING "Aluminum support requested but not found. Disabling.")
   endif (Aluminum_FOUND)
-endif (${PROJECT_NAME}_ENABLE_ALUMINUM)
+endif (Hydrogen_ENABLE_ALUMINUM)
 
 include(detect/CXX)
 
@@ -361,14 +385,14 @@ include(detect/CXX)
 # Find third-party libraries
 #
 
-if (${PROJECT_NAME}_ENABLE_VTUNE)
+if (Hydrogen_ENABLE_VTUNE)
   find_package(VTUNE REQUIRED)
   set(HYDROGEN_HAVE_VTUNE TRUE)
 else ()
   set(HYDROGEN_HAVE_VTUNE FALSE)
 endif ()
 
-if (${PROJECT_NAME}_ENABLE_OPENMP)
+if (Hydrogen_ENABLE_OPENMP)
   include(FindAndVerifyOpenMP)
   if (OpenMP_FOUND)
     set(EL_HYBRID ON)
@@ -376,9 +400,9 @@ if (${PROJECT_NAME}_ENABLE_OPENMP)
     message(WARNING "Requested OpenMP support but OpenMP support was either "
       "not found or not functional.")
     set(EL_HYBRID OFF)
-    set(${PROJECT_NAME}_ENABLE_OPENMP OFF)
+    set(Hydrogen_ENABLE_OPENMP OFF)
   endif ()
-endif (${PROJECT_NAME}_ENABLE_OPENMP)
+endif (Hydrogen_ENABLE_OPENMP)
 
 include(FindAndVerifyMPI)
 include(FindAndVerifyLAPACK)
@@ -402,55 +426,46 @@ add_subdirectory(src)
 
 configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/config.h.in"
   "${PROJECT_BINARY_DIR}/include/El/config.h")
-configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/hydrogen_config.h.in"
+configure_file(
+  "${PROJECT_SOURCE_DIR}/cmake/configure_files/hydrogen_config.h.in"
   "${PROJECT_BINARY_DIR}/include/El/hydrogen_config.h")
 
-add_library(${PROJECT_NAME} "${HYDROGEN_SOURCES}" "${HYDROGEN_HEADERS}")
-target_include_directories(${PROJECT_NAME} PUBLIC
+add_library(Hydrogen "${HYDROGEN_SOURCES}" "${HYDROGEN_HEADERS}")
+target_include_directories(Hydrogen PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/El>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-if (TARGET AL::Al)
-  target_link_libraries(${PROJECT_NAME} PUBLIC AL::Al)
-endif ()
+# These flags don't need to be propagated. Just because Hydrogen is
+# built with "-Werror", for instance, doesn't mean downstreams should
+# be forced to build with that (even though they maybe should)...
+target_link_libraries(Hydrogen PRIVATE ${EXTRA_CXX_FLAGS})
+
+target_link_libraries(Hydrogen PUBLIC ${Aluminum_LIBRARIES})
 
 if (TARGET OpenMP::OpenMP_CXX)
-  target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
+  target_link_libraries(Hydrogen PUBLIC OpenMP::OpenMP_CXX)
 endif ()
-target_link_libraries(${PROJECT_NAME} PUBLIC MPI::MPI_CXX)
-target_link_libraries(${PROJECT_NAME} PUBLIC LAPACK::lapack)
-target_link_libraries(${PROJECT_NAME} PUBLIC EP::extended_precision)
-if (TARGET vtune::vtune)
-  target_link_libraries(${PROJECT_NAME} PUBLIC vtune::vtune)
-endif ()
-if (TARGET cuda::nvtx)
-  target_link_libraries(${PROJECT_NAME} PUBLIC cuda::nvtx)
-endif ()
-if (HYDROGEN_HAVE_CUDA)
-  target_link_libraries(${PROJECT_NAME} PUBLIC cuda::toolkit)
-endif ()
+target_link_libraries(Hydrogen PUBLIC MPI::MPI_CXX)
+target_link_libraries(Hydrogen PUBLIC LAPACK::lapack)
+target_link_libraries(Hydrogen PUBLIC EP::extended_precision)
 
-if (BUILD_SHARED_LIBS)
-  if (APPLE)
-    set_property(
-      TARGET ${PROJECT_NAME} APPEND PROPERTY LINK_FLAGS "-Wl,-undefined,error")
-  else ()
-    set_property(
-      TARGET ${PROJECT_NAME} APPEND PROPERTY LINK_FLAGS "-Wl,-no-undefined")
-  endif ()
+target_link_libraries(Hydrogen PUBLIC ${VTUNE_LIBRARIES})
+target_link_libraries(Hydrogen PUBLIC ${NVTX_LIBRARIES})
+if (HYDROGEN_HAVE_CUDA)
+  target_link_libraries(Hydrogen PUBLIC cuda::toolkit)
 endif ()
 
 # Setup the tests
-if (${PROJECT_NAME}_ENABLE_TESTING)
+if (Hydrogen_ENABLE_TESTING)
   enable_testing()
   add_subdirectory(tests)
 endif ()
 
 # Setup the library install
-install(TARGETS ${PROJECT_NAME}
-  EXPORT ${PROJECT_NAME}Targets
+install(TARGETS Hydrogen
+  EXPORT HydrogenTargets
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -484,9 +499,10 @@ export(EXPORT HydrogenTargets NAMESPACE H:: FILE HydrogenTargets.cmake)
 # Write the configure file for the install tree
 set(INCLUDE_INSTALL_DIRS include)
 set(LIB_INSTALL_DIR lib)
-set(CMAKE_INSTALL_DIR lib/cmake/hydrogen)
+set(CMAKE_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/hydrogen)
 set(EXTRA_CMAKE_MODULE_DIR)
-configure_package_config_file(cmake/configure_files/HydrogenConfig.cmake.in
+configure_package_config_file(
+  cmake/configure_files/HydrogenConfig.cmake.in
   "${CMAKE_BINARY_DIR}/cmake/HydrogenConfig.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_DIR}
   PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
@@ -498,9 +514,9 @@ install(FILES
   DESTINATION "include/El")
 
 # Install tree export
-install(EXPORT ${PROJECT_NAME}Targets
+install(EXPORT HydrogenTargets
   NAMESPACE H::
-  DESTINATION lib/cmake/hydrogen)
+  DESTINATION ${CMAKE_INSTALL_DIR})
 
 # Install the headers
 install(DIRECTORY include DESTINATION .
@@ -511,7 +527,7 @@ install(FILES
   "${PROJECT_BINARY_DIR}/cmake/HydrogenConfig.cmake"
   "${PROJECT_BINARY_DIR}/HydrogenConfigVersion.cmake"
   DESTINATION ${CMAKE_INSTALL_DIR})
-install(DIRECTORY cmake/modules DESTINATION lib/cmake/hydrogen
+install(DIRECTORY cmake/modules DESTINATION ${CMAKE_INSTALL_DIR}
   FILES_MATCHING PATTERN "*.cmake")
 
 # Summarize this configuration
@@ -577,4 +593,5 @@ if (NOT __dont_print_summary)
     PRINT_EMPTY_VARIABLES
     )
   set(__dont_print_summary ON CACHE INTERNAL "" FORCE)
+  # Only print the configuration on initial configuration
 endif ()

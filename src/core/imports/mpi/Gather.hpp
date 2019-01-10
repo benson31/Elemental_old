@@ -10,24 +10,20 @@ template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,COLL>>*/>
 void Gather(
     const T* sbuf, int sc,
-    T* rbuf, int rc, int root, Comm comm, SyncInfo<D> const& syncInfo )
+    T* rbuf, int rc, int root, Comm const& comm, SyncInfo<D> const& syncInfo )
 {
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::GATHER>;
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto multisync = MakeMultiSync(alSyncInfo, syncInfo);
     Al::Gather<Backend>(
-        sbuf, rbuf, sc, root, comm.template GetComm<Backend>());
+        sbuf, rbuf, sc, root, comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 template <typename T, Device D, typename, typename, typename, typename, typename>
 void Gather(
     const T* sbuf, int sc,
-    T* rbuf, int rc, int root, Comm comm,
+    T* rbuf, int rc, int root, Comm const& comm,
     SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -43,16 +39,16 @@ void Gather(
 
     Synchronize(syncInfo);
 
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Gather(
             sbuf, sc, TypeMap<T>(),
-            rbuf, rc, TypeMap<T>(), root, comm.comm));
+            rbuf, rc, TypeMap<T>(), root, comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
 void Gather(
     const Complex<T>* sbuf, int sc,
-    Complex<T>* rbuf, int rc, int root, Comm comm,
+    Complex<T>* rbuf, int rc, int root, Comm const& comm,
     SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -69,24 +65,24 @@ void Gather(
     Synchronize(syncInfo);
 
 #ifdef EL_AVOID_COMPLEX_MPI
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Gather(
             sbuf, 2*sc, TypeMap<T>(),
             rbuf, 2*rc, TypeMap<T>(),
-            root, comm.comm));
+            root, comm.GetMPIComm()));
 #else
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Gather(
             sbuf, sc, TypeMap<Complex<T>>(),
             rbuf, rc, TypeMap<Complex<T>>(),
-            root, comm.comm));
+            root, comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
 void Gather(
     const T* sbuf, int sc,
-    T* rbuf, int rc, int root, Comm comm, SyncInfo<D> const& syncInfo )
+    T* rbuf, int rc, int root, Comm const& comm, SyncInfo<D> const& syncInfo )
 {
     EL_DEBUG_CSE
 
@@ -108,27 +104,27 @@ void Gather(
 
     if( commRank == root )
         ReserveSerialized( totalRecv, rbuf, packedRecv );
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Gather(
             packedSend.data(), sc, TypeMap<T>(),
-            packedRecv.data(), rc, TypeMap<T>(), root, comm.comm ) );
+            packedRecv.data(), rc, TypeMap<T>(), root, comm.GetMPIComm() ) );
     if( commRank == root )
         Deserialize( totalRecv, packedRecv, rbuf );
 }
 
 template <typename T, Device D, typename, typename>
-void Gather(const T*, int, T*, int, int, Comm, SyncInfo<D> const&)
+void Gather(const T*, int, T*, int, int, Comm const&, SyncInfo<D> const&)
 {
     LogicError("Gather: Bad device/type combination.");
 }
 
 #define MPI_COLLECTIVE_PROTO_DEV(T,D) \
     template void Gather(const T* sbuf, int sc, T* rbuf, int rc, int root, \
-                         Comm comm, SyncInfo<D> const&);
+                         Comm const& comm, SyncInfo<D> const&);
 
 #define MPI_COLLECTIVE_COMPLEX_PROTO_DEV(T,D) \
     template void Gather(const Complex<T>* sbuf, int sc, Complex<T>* rbuf, \
-                         int rc, int root, Comm comm, SyncInfo<D> const&);
+                         int rc, int root, Comm const& comm, SyncInfo<D> const&);
 
 #ifdef HYDROGEN_HAVE_CUDA
 #define MPI_COLLECTIVE_PROTO(T) \

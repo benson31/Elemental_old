@@ -38,8 +38,8 @@ public:
 
 private:
     Memory<T,D> mem_;
-    T* data_;
-    size_t size_;
+    T* data_ = nullptr;
+    size_t size_ = 0;
 }; // class simple_buffer
 
 

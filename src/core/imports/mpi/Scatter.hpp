@@ -10,17 +10,13 @@ template <typename T, Device D,
           typename/*=EnableIf<IsAluminumSupported<T,D,COLL>>*/>
 void Scatter(
     const T* sbuf, int sc,
-    T* rbuf, int rc, int root, Comm comm, SyncInfo<D> const& syncInfo )
+    T* rbuf, int rc, int root, Comm const& comm, SyncInfo<D> const& syncInfo )
 {
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::GATHER>;
-
-    auto alSyncInfo =
-        SyncInfoFromComm(comm.template GetComm<Backend>(), syncInfo);
-
-    auto multisync = MakeMultiSync(alSyncInfo, syncInfo);
-    Al::Scatter<Backend>(sbuf, rbuf, sc, root, comm.template GetComm<Backend>());
+    Al::Scatter<Backend>(sbuf, rbuf, sc, root,
+                         comm.template GetComm<Backend>(syncInfo));
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
@@ -28,7 +24,7 @@ template <typename T, Device D,
           typename, typename, typename, typename, typename>
 void Scatter(
     const T* sbuf, int sc,
-    T* rbuf, int rc, int root, Comm comm,
+    T* rbuf, int rc, int root, Comm const& comm,
     SyncInfo<D> const& syncInfo)
 {
 #ifdef HYDROGEN_ENSURE_HOST_MPI_BUFFERS
@@ -41,16 +37,16 @@ void Scatter(
 #endif // HYDROGEN_ENSURE_HOST_MPI_BUFFERS
 
     Synchronize(syncInfo);
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Scatter(
             sbuf, sc, TypeMap<T>(),
-            rbuf, rc, TypeMap<T>(), root, comm.comm));
+            rbuf, rc, TypeMap<T>(), root, comm.GetMPIComm()));
 }
 
 template <typename T, Device D, typename, typename, typename, typename>
 void Scatter(
     Complex<T> const* sbuf, int sc,
-    Complex<T>* rbuf, int rc, int root, Comm comm,
+    Complex<T>* rbuf, int rc, int root, Comm const& comm,
     SyncInfo<D> const& syncInfo)
 {
     EL_DEBUG_CSE
@@ -67,23 +63,23 @@ void Scatter(
     Synchronize(syncInfo);
 
 #ifdef EL_AVOID_COMPLEX_MPI
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Scatter(
             sbuf, 2*sc, TypeMap<T>(),
-            rbuf, 2*rc, TypeMap<T>(), root, comm.comm));
+            rbuf, 2*rc, TypeMap<T>(), root, comm.GetMPIComm()));
 #else
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Scatter(
             sbuf, sc, TypeMap<Complex<T>>(),
             rbuf,rc, TypeMap<Complex<T>>(),
-            root, comm.comm));
+            root, comm.GetMPIComm()));
 #endif
 }
 
 template <typename T, Device D, typename, typename, typename>
 void Scatter(
     const T* sbuf, int sc,
-    T* rbuf, int rc, int root, Comm comm, SyncInfo<D> const& syncInfo )
+    T* rbuf, int rc, int root, Comm const& comm, SyncInfo<D> const& syncInfo )
 {
     EL_DEBUG_CSE
 
@@ -104,22 +100,22 @@ void Scatter(
         Serialize( totalSend, sbuf, packedSend );
 
     ReserveSerialized( rc, rbuf, packedRecv );
-    CheckMpi(
+    EL_CHECK_MPI_CALL(
         MPI_Scatter(
             packedSend.data(), sc, TypeMap<T>(),
-            packedRecv.data(), rc, TypeMap<T>(), root, comm.comm));
+            packedRecv.data(), rc, TypeMap<T>(), root, comm.GetMPIComm()));
     Deserialize( rc, packedRecv, rbuf );
 }
 
 template <typename T, Device D, typename, typename>
-void Scatter(const T*, int, T*, int, int, Comm, SyncInfo<D> const&)
+void Scatter(const T*, int, T*, int, int, Comm const&, SyncInfo<D> const&)
 {
     LogicError("Scatter: Bad device/type combination.");
 }
 
 #define MPI_COLLECTIVE_PROTO_DEV(T,D) \
     template void Scatter(const T* sbuf, int sc, T* rbuf, int rc, int root, \
-                          Comm comm, SyncInfo<D> const&);
+                          Comm const& comm, SyncInfo<D> const&);
 
 #ifdef HYDROGEN_HAVE_CUDA
 #define MPI_COLLECTIVE_PROTO(T) \
