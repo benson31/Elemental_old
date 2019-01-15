@@ -13,7 +13,7 @@ namespace El {
 
 // Recall that A must already be the correct size
 template<typename T, Device D>
-void Recv(Matrix<T,D>& A, mpi::Comm comm, int source)
+void Recv(Matrix<T,D>& A, mpi::Comm const& comm, int source)
 {
     EL_DEBUG_CSE
     const Int height = A.Height();
@@ -41,7 +41,7 @@ void Recv(Matrix<T,D>& A, mpi::Comm comm, int source)
 }
 
 template <typename T>
-void Recv(AbstractMatrix<T>& A, mpi::Comm comm, int source)
+void Recv(AbstractMatrix<T>& A, mpi::Comm const& comm, int source)
 {
     EL_DEBUG_CSE;
     switch (A.GetDevice())
@@ -66,7 +66,7 @@ void Recv(AbstractMatrix<T>& A, mpi::Comm comm, int source)
 
 #define PROTO(T)                                                \
     EL_EXTERN template void Recv(                               \
-        AbstractMatrix<T>& A, mpi::Comm comm, int source );
+        AbstractMatrix<T>& A, mpi::Comm const& comm, int source );
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

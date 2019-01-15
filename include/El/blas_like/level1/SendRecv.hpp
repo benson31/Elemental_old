@@ -14,7 +14,7 @@ namespace El
 template <typename T>
 void SendRecv(
     AbstractMatrix<T> const& A, AbstractMatrix<T>& B,
-    mpi::Comm comm, int sendRank, int recvRank)
+    mpi::Comm const& comm, int sendRank, int recvRank)
 {
     if (A.GetDevice() != B.GetDevice())
         LogicError("SendRecv: Matrices must be on the same device.");
@@ -43,7 +43,7 @@ void SendRecv(
 template <typename T, Device D>
 void SendRecv
 ( Matrix<T,D> const& A, Matrix<T,D>& B,
-  mpi::Comm comm, int sendRank, int recvRank )
+  mpi::Comm const& comm, int sendRank, int recvRank )
 {
     EL_DEBUG_CSE
     const Int heightA = A.Height();
@@ -105,16 +105,16 @@ void SendRecv
 
 #define PROTO(T) \
   EL_EXTERN template void SendRecv \
-  ( const Matrix<T,Device::CPU>& A, Matrix<T,Device::CPU>& B, mpi::Comm comm, \
+  ( const Matrix<T,Device::CPU>& A, Matrix<T,Device::CPU>& B, mpi::Comm const& comm, \
     int sendRank, int recvRank );
 
 #ifdef HYDROGEN_HAVE_CUDA
 EL_EXTERN template void SendRecv(
     Matrix<float,Device::GPU> const&, Matrix<float,Device::GPU>&,
-    mpi::Comm, int, int);
+    mpi::Comm const&, int, int);
 EL_EXTERN template void SendRecv(
     Matrix<double,Device::GPU> const&, Matrix<double,Device::GPU>&,
-    mpi::Comm, int, int);
+    mpi::Comm const&, int, int);
 #endif // HYDROGEN_HAVE_CUDA
 
 #define EL_ENABLE_DOUBLEDOUBLE

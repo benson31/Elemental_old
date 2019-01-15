@@ -49,7 +49,7 @@ void TranslateBetweenGrids
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
     B.Resize(m, n);
-    mpi::Comm viewingCommB = B.Grid().ViewingComm();
+    mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
     mpi::Group owningGroupA = A.Grid().OwningGroup();
 
     // Just need to ensure that each viewing comm contains the other team's
@@ -240,13 +240,17 @@ void TranslateBetweenGrids
     }
 }
 
+
 template<typename T, Device D1, Device D2>
 void TranslateBetweenGrids
 (const DistMatrix<T,STAR,STAR,ELEMENT,D1>& A,
   DistMatrix<T,STAR,STAR,ELEMENT,D2>& B)
 {
-    EL_DEBUG_CSE
-
+    EL_DEBUG_CSE;
+    LogicError("TranslateBetweenGrids is no longer supported. "
+               "If you have reached this message, please open "
+               "an issue at https://github.com/llnl/elemental.");
+#ifdef EL_TRANSLATE_BETWEEN_GRIDS_REENABLE__
     const Int height = A.Height();
     const Int width = A.Width();
     B.Resize(height, width);
@@ -258,10 +262,10 @@ void TranslateBetweenGrids
     // (B is the *parent* of A).
     //
     // TODO(poulson): Decide whether these condition can be simplified.
-    mpi::Comm commA = A.Grid().VCComm();
-    mpi::Comm commB = B.Grid().VCComm();
-    mpi::Comm viewingCommA = A.Grid().ViewingComm();
-    mpi::Comm viewingCommB = B.Grid().ViewingComm();
+    mpi::Comm const& commA = A.Grid().VCComm();
+    mpi::Comm const& commB = B.Grid().VCComm();
+    mpi::Comm const& viewingCommA = A.Grid().ViewingComm();
+    mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
     const int commSizeA = mpi::Size(commA);
     const int commSizeB = mpi::Size(commB);
     const int viewingCommSizeA = mpi::Size(viewingCommA);
@@ -356,6 +360,7 @@ void TranslateBetweenGrids
 
     if(rankA == 0)
         mpi::Wait(sendRequest);
+#endif // EL_TRANSLATE_BETWEEN_GRIDS_REENABLE__
 }
 
 } // namespace copy

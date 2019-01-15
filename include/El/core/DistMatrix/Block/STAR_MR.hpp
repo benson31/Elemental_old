@@ -132,15 +132,15 @@ public:
     Dist CollectedColDist()    const EL_NO_EXCEPT override;
     Dist CollectedRowDist()    const EL_NO_EXCEPT override;
 
-    mpi::Comm DistComm()            const EL_NO_EXCEPT override;
-    mpi::Comm CrossComm()           const EL_NO_EXCEPT override;
-    mpi::Comm RedundantComm()       const EL_NO_EXCEPT override;
-    mpi::Comm ColComm()             const EL_NO_EXCEPT override;
-    mpi::Comm RowComm()             const EL_NO_EXCEPT override;
-    mpi::Comm PartialColComm()      const EL_NO_EXCEPT override;
-    mpi::Comm PartialRowComm()      const EL_NO_EXCEPT override;
-    mpi::Comm PartialUnionColComm() const EL_NO_EXCEPT override;
-    mpi::Comm PartialUnionRowComm() const EL_NO_EXCEPT override;
+    mpi::Comm const& DistComm()            const EL_NO_EXCEPT override;
+    mpi::Comm const& CrossComm()           const EL_NO_EXCEPT override;
+    mpi::Comm const& RedundantComm()       const EL_NO_EXCEPT override;
+    mpi::Comm const& ColComm()             const EL_NO_EXCEPT override;
+    mpi::Comm const& RowComm()             const EL_NO_EXCEPT override;
+    mpi::Comm const& PartialColComm()      const EL_NO_EXCEPT override;
+    mpi::Comm const& PartialRowComm()      const EL_NO_EXCEPT override;
+    mpi::Comm const& PartialUnionColComm() const EL_NO_EXCEPT override;
+    mpi::Comm const& PartialUnionRowComm() const EL_NO_EXCEPT override;
 
     int DistSize()              const EL_NO_EXCEPT override;
     int CrossSize()             const EL_NO_EXCEPT override;

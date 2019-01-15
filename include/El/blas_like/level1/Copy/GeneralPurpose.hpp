@@ -91,11 +91,9 @@ void Helper
     // Compute the metadata
     // ====================
     const Int totalSend = remoteEntries.size();
-    mpi::Comm comm;
     vector<int> sendCounts, owners(totalSend);
     if (includeViewers)
     {
-        comm = g.ViewingComm();
         const int viewingSize = mpi::Size(g.ViewingComm());
         const int distBSize = mpi::Size(B.DistComm());
 
@@ -119,7 +117,6 @@ void Helper
     {
         if (!g.InGrid())
             return;
-        comm = g.VCComm();
 
         const int distBSize = mpi::Size(B.DistComm());
         vector<int> distBToVC(distBSize);
@@ -154,7 +151,9 @@ void Helper
 
     // Exchange and unpack the data
     // ============================
-    auto recvBuf = mpi::AllToAll(sendBuf, sendCounts, sendOffs, comm);
+    auto recvBuf = mpi::AllToAll(
+        sendBuf, sendCounts, sendOffs,
+        includeViewers ? g.ViewingComm(): g.VCComm());
     if (BPartic)
     {
         if (B.RedundantRank() == redundantRootB)

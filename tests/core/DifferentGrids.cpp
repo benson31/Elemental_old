@@ -2,20 +2,21 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El.hpp>
 using namespace El;
 
-int 
+int
 main( int argc, char* argv[] )
 {
     Environment env( argc, argv );
-    mpi::Comm comm = mpi::COMM_WORLD;
+    mpi::Comm comm = mpi::NewWorldComm();
+
     const Int commSize = mpi::Size( comm );
-    
+
     try
     {
         const bool colMajor = Input("--colMajor","column-major ordering?",true);
@@ -37,12 +38,13 @@ main( int argc, char* argv[] )
             sqrtRanks[i] = i;
 
         mpi::Group group, sqrtGroup;
-        
+
         mpi::CommGroup( comm, group );
         mpi::Incl( group, sqrtRanks.size(), sqrtRanks.data(), sqrtGroup );
 
-        const Grid grid( comm, order );
-        const Grid sqrtGrid( comm, sqrtGroup, commSqrt, orderSqrt );
+        const Grid grid( std::move(comm), order );
+        const Grid sqrtGrid(
+            mpi::NewWorldComm(), sqrtGroup, commSqrt, orderSqrt );
 
         DistMatrix<double> A(grid), ASqrt(sqrtGrid);
 
@@ -63,7 +65,7 @@ main( int argc, char* argv[] )
         if( print )
             Print( A, "A := ASqrt" );
 
-        const Grid newGrid( comm, order );
+        const Grid newGrid( mpi::NewWorldComm(), order );
         A.SetGrid( newGrid );
         if( print )
             Print( A, "A after changing grid" );

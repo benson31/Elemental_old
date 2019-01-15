@@ -14,7 +14,7 @@ namespace El {
 
 template<typename Field>
 void ColumnTwoNormsHelper
-( const Matrix<Field>& ALoc, Matrix<Base<Field>>& normsLoc, mpi::Comm comm )
+( const Matrix<Field>& ALoc, Matrix<Base<Field>>& normsLoc, mpi::Comm const& comm )
 {
     EL_DEBUG_CSE
     typedef Base<Field> Real;
@@ -43,7 +43,7 @@ template<typename Real>
 void ColumnTwoNormsHelper
 ( const Matrix<Real>& ARealLoc,
   const Matrix<Real>& AImagLoc,
-        Matrix<Real>& normsLoc, mpi::Comm comm )
+        Matrix<Real>& normsLoc, mpi::Comm const& comm )
 {
     EL_DEBUG_CSE
     const Int mLocal = ARealLoc.Height();

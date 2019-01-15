@@ -67,14 +67,14 @@ void AdjointAxpyContract
 // AllReduce
 // =========
 template<typename T>
-void AllReduce( AbstractMatrix<T>& A, mpi::Comm comm, mpi::Op op=mpi::SUM );
+void AllReduce( AbstractMatrix<T>& A, mpi::Comm const& comm, mpi::Op op=mpi::SUM );
 template<typename T, Device D, typename=EnableIf<IsDeviceValidType<T,D>>>
-void AllReduce( Matrix<T,D>& A, mpi::Comm comm, mpi::Op op=mpi::SUM );
+void AllReduce( Matrix<T,D>& A, mpi::Comm const& comm, mpi::Op op=mpi::SUM );
 template<typename T, Device D,
          typename=DisableIf<IsDeviceValidType<T,D>>,typename=void>
-void AllReduce( Matrix<T,D>& A, mpi::Comm comm, mpi::Op op=mpi::SUM );
+void AllReduce( Matrix<T,D>& A, mpi::Comm const& comm, mpi::Op op=mpi::SUM );
 template<typename T>
-void AllReduce( AbstractDistMatrix<T>& A, mpi::Comm comm, mpi::Op op=mpi::SUM );
+void AllReduce( AbstractDistMatrix<T>& A, mpi::Comm const& comm, mpi::Op op=mpi::SUM );
 
 // Axpy
 // ====
@@ -154,28 +154,28 @@ void LocalAxpyTrapezoid
 // Broadcast
 // =========
 template<typename T, Device D>
-void Broadcast( Matrix<T, D>& A, mpi::Comm comm, int rank=0 );
+void Broadcast( Matrix<T, D>& A, mpi::Comm const& comm, int rank=0 );
 template<typename T>
-void Broadcast( AbstractMatrix<T>& A, mpi::Comm comm, int rank=0 );
+void Broadcast( AbstractMatrix<T>& A, mpi::Comm const& comm, int rank=0 );
 template<typename T>
-void Broadcast( AbstractDistMatrix<T>& A, mpi::Comm comm, int rank=0 );
+void Broadcast( AbstractDistMatrix<T>& A, mpi::Comm const& comm, int rank=0 );
 
 // Send
 // ====
 template <typename T>
-void Send(AbstractMatrix<T> const& A, mpi::Comm comm, int destination);
+void Send(AbstractMatrix<T> const& A, mpi::Comm const& comm, int destination);
 template <typename T, Device D>
-void Send(Matrix<T,D> const& A, mpi::Comm comm, int destination);
+void Send(Matrix<T,D> const& A, mpi::Comm const& comm, int destination);
 
 // SendRecv
 // ========
 template<typename T>
 void SendRecv
-( const AbstractMatrix<T>& A, AbstractMatrix<T>& B, mpi::Comm comm,
+( const AbstractMatrix<T>& A, AbstractMatrix<T>& B, mpi::Comm const& comm,
   int sendRank, int recvRank );
 template<typename T, Device D>
 void SendRecv
-( const Matrix<T,D>& A, Matrix<T,D>& B, mpi::Comm comm,
+( const Matrix<T,D>& A, Matrix<T,D>& B, mpi::Comm const& comm,
   int sendRank, int recvRank );
 
 // Recv
@@ -183,9 +183,9 @@ void SendRecv
 // On entry, the matrix 'A' must be of the correct size and will be overwritten
 // on exit (without changing the leading dimension).
 template <typename T>
-void Recv(AbstractMatrix<T>& A, mpi::Comm comm, int source);
+void Recv(AbstractMatrix<T>& A, mpi::Comm const& comm, int source);
 template<typename T, Device D>
-void Recv(Matrix<T,D>& A, mpi::Comm comm, int source );
+void Recv(Matrix<T,D>& A, mpi::Comm const& comm, int source );
 
 // Column norms
 // ============

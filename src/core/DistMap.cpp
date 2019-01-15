@@ -250,7 +250,7 @@ void InvertMap( const DistMap& map, DistMap& inverseMap )
 {
     EL_DEBUG_CSE
     const El::Grid& grid = map.Grid();
-    mpi::Comm comm = grid.Comm();
+    mpi::Comm const& comm = grid.Comm();
     const int commSize = grid.Size();
 
     const Int numLocalSources = map.NumLocalSources();

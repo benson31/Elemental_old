@@ -177,7 +177,7 @@ void ColAllGather_impl(const ElementalMatrix<T>& A, ElementalMatrix<T>& B)
     // Consider a A[MD,STAR] -> B[STAR,STAR] redistribution, where only the
     // owning team of the MD distribution of A participates in the initial phase
     // and the second phase broadcasts over the cross communicator.
-    if (A.Grid().InGrid() && A.CrossComm() != mpi::COMM_SELF)
+    if (A.Grid().InGrid() && (!CongruentToCommSelf(A.CrossComm())))
         El::Broadcast(B, A.CrossComm(), A.Root());
 }
 
@@ -351,7 +351,7 @@ void ColAllGather
     // Consider a A[MD,STAR] -> B[STAR,STAR] redistribution, where only the
     // owning team of the MD distribution of A participates in the initial phase
     // and the second phase broadcasts over the cross communicator.
-    if (A.Grid().InGrid() && A.CrossComm() != mpi::COMM_SELF)
+    if (A.Grid().InGrid() && (!CongruentToCommSelf(A.CrossComm())))
         El::Broadcast(B, A.CrossComm(), A.Root());
 }
 

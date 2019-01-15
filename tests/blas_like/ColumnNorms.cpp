@@ -80,7 +80,7 @@ void TestColumnMaxNorms(Int m, Int n, const Grid& g, bool print)
 int main(int argc, char** argv)
 {
   Environment env(argc, argv);
-  mpi::Comm comm = mpi::COMM_WORLD;
+  mpi::Comm comm = mpi::NewWorldComm();
   try
   {
     const Int m = Input("--m", "height", 100);
@@ -89,8 +89,8 @@ int main(int argc, char** argv)
     ProcessInput();
     PrintInputReport();
 
-    const Grid g(comm);
-    OutputFromRoot(comm, "Testing ColumnTwoNorms");
+    const Grid g(std::move(comm));
+    OutputFromRoot(g.Comm(), "Testing ColumnTwoNorms");
     TestColumnTwoNorms<float, ELEMENT>(m, n, g, print);
     TestColumnTwoNorms<float, BLOCK>(m, n, g, print);
     TestColumnTwoNorms<double, ELEMENT>(m, n, g, print);
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     TestColumnTwoNorms<BigFloat, ELEMENT>(m, n, g, print);
     TestColumnTwoNorms<BigFloat, BLOCK>(m, n, g, print);
 #endif
-    OutputFromRoot(comm, "Testing ColumnMaxNorms");
+    OutputFromRoot(g.Comm(), "Testing ColumnMaxNorms");
     TestColumnMaxNorms<float, ELEMENT>(m, n, g, print);
     TestColumnMaxNorms<float, BLOCK>(m, n, g, print);
     TestColumnMaxNorms<double, ELEMENT>(m, n, g, print);

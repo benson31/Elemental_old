@@ -76,7 +76,7 @@ void AllGather
                 B.Buffer(), B.LDim(), syncInfoB);
         }
     }
-    if( A.Grid().InGrid() && A.CrossComm() != mpi::COMM_SELF )
+    if (A.Grid().InGrid() && (!CongruentToCommSelf(A.CrossComm())))
         El::Broadcast( B, A.CrossComm(), A.Root() );
 }
 

@@ -13,7 +13,7 @@ namespace El
 {
 
 template <typename T, Device D, typename>
-void AllReduce(Matrix<T,D>& A, mpi::Comm comm, mpi::Op op)
+void AllReduce(Matrix<T,D>& A, mpi::Comm const& comm, mpi::Op op)
 {
     EL_DEBUG_CSE
     if(mpi::Size(comm) == 1)
@@ -48,13 +48,13 @@ void AllReduce(Matrix<T,D>& A, mpi::Comm comm, mpi::Op op)
 }
 
 template <typename T, Device D,typename,typename>
-void AllReduce(Matrix<T,D>& A, mpi::Comm comm, mpi::Op op)
+void AllReduce(Matrix<T,D>& A, mpi::Comm const& comm, mpi::Op op)
 {
     LogicError("AllReduce: Bad type/device combination!");
 }
 
 template <typename T>
-void AllReduce(AbstractMatrix<T>& A, mpi::Comm comm, mpi::Op op)
+void AllReduce(AbstractMatrix<T>& A, mpi::Comm const& comm, mpi::Op op)
 {
     switch (A.GetDevice())
     {
@@ -72,7 +72,7 @@ void AllReduce(AbstractMatrix<T>& A, mpi::Comm comm, mpi::Op op)
 }
 
 template<typename T>
-void AllReduce(AbstractDistMatrix<T>& A, mpi::Comm comm, mpi::Op op)
+void AllReduce(AbstractDistMatrix<T>& A, mpi::Comm const& comm, mpi::Op op)
 {
     EL_DEBUG_CSE
     if(mpi::Size(comm) == 1)
@@ -91,9 +91,9 @@ void AllReduce(AbstractDistMatrix<T>& A, mpi::Comm comm, mpi::Op op)
 
 #define PROTO(T) \
   EL_EXTERN template void AllReduce \
-  (AbstractMatrix<T>& A, mpi::Comm comm, mpi::Op op); \
+  (AbstractMatrix<T>& A, mpi::Comm const& comm, mpi::Op op); \
   EL_EXTERN template void AllReduce \
-  (AbstractDistMatrix<T>& A, mpi::Comm comm, mpi::Op op);
+  (AbstractDistMatrix<T>& A, mpi::Comm const& comm, mpi::Op op);
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

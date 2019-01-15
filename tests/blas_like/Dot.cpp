@@ -47,7 +47,7 @@ void TestDot(Int m, Int n, const Grid& g, bool print)
 int main(int argc, char** argv)
 {
   Environment env(argc, argv);
-  mpi::Comm comm = mpi::COMM_WORLD;
+  mpi::Comm comm = mpi::NewWorldComm();
   try
   {
     const Int m = Input("--m", "height", 100);
@@ -56,8 +56,8 @@ int main(int argc, char** argv)
     ProcessInput();
     PrintInputReport();
 
-    const Grid g(comm);
-    OutputFromRoot(comm, "Testing Dot");
+    const Grid g(std::move(comm));
+    OutputFromRoot(g.Comm(), "Testing Dot");
     TestDot<float, ELEMENT>(m, n, g, print);
     TestDot<float, BLOCK>(m, n, g, print);
     TestDot<Complex<float>, ELEMENT>(m, n, g, print);

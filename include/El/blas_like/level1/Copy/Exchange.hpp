@@ -16,7 +16,7 @@ template<typename T, Device D,typename=EnableIf<IsDeviceValidType<T,D>>>
 void Exchange_impl
 ( const ElementalMatrix<T>& A,
         ElementalMatrix<T>& B,
-  int sendRank, int recvRank, mpi::Comm comm )
+  int sendRank, int recvRank, mpi::Comm const& comm )
 {
     EL_DEBUG_CSE
     EL_DEBUG_ONLY(AssertSameGrids( A, B ))
@@ -115,7 +115,7 @@ template<typename T,Device D,
 void Exchange_impl
 ( const ElementalMatrix<T>& A,
         ElementalMatrix<T>& B,
-  int sendRank, int recvRank, mpi::Comm comm )
+  int sendRank, int recvRank, mpi::Comm const& comm )
 {
     LogicError("Exchange: Bad Device/type combo.");
 }
@@ -124,7 +124,7 @@ template<typename T>
 void Exchange
 ( const ElementalMatrix<T>& A,
         ElementalMatrix<T>& B,
-  int sendRank, int recvRank, mpi::Comm comm )
+  int sendRank, int recvRank, mpi::Comm const& comm )
 {
     if (A.GetLocalDevice() != B.GetLocalDevice())
         LogicError("Exchange: Device error.");

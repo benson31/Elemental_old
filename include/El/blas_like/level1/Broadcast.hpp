@@ -12,7 +12,7 @@
 namespace El {
 
 template <typename T, Device D>
-void Broadcast_impl( Matrix<T,D>& A, mpi::Comm comm, int rank )
+void Broadcast_impl( Matrix<T,D>& A, mpi::Comm const& comm, int rank )
 {
     EL_DEBUG_CSE
     const int commSize = mpi::Size( comm );
@@ -52,7 +52,7 @@ void Broadcast_impl( Matrix<T,D>& A, mpi::Comm comm, int rank )
 }
 
 template<typename T>
-void Broadcast( AbstractMatrix<T>& A, mpi::Comm comm, int rank )
+void Broadcast( AbstractMatrix<T>& A, mpi::Comm const& comm, int rank )
 {
     switch(A.GetDevice())
     {
@@ -73,7 +73,7 @@ void Broadcast( AbstractMatrix<T>& A, mpi::Comm comm, int rank )
 
 
 template <Device D, typename T>
-void Broadcast_impl( AbstractDistMatrix<T>& A, mpi::Comm comm, int rank )
+void Broadcast_impl( AbstractDistMatrix<T>& A, mpi::Comm const& comm, int rank )
 {
     EL_DEBUG_CSE
     const int commSize = mpi::Size( comm );
@@ -117,7 +117,7 @@ void Broadcast_impl( AbstractDistMatrix<T>& A, mpi::Comm comm, int rank )
 }
 
 template<typename T>
-void Broadcast( AbstractDistMatrix<T>& A, mpi::Comm comm, int rank )
+void Broadcast( AbstractDistMatrix<T>& A, mpi::Comm const& comm, int rank )
 {
     EL_DEBUG_CSE
     switch (A.GetLocalDevice())
@@ -143,9 +143,9 @@ void Broadcast( AbstractDistMatrix<T>& A, mpi::Comm comm, int rank )
 
 #define PROTO(T) \
   EL_EXTERN template void Broadcast \
-  ( AbstractMatrix<T>& A, mpi::Comm comm, int rank ); \
+  ( AbstractMatrix<T>& A, mpi::Comm const& comm, int rank ); \
   EL_EXTERN template void Broadcast \
-  ( AbstractDistMatrix<T>& A, mpi::Comm comm, int rank );
+  ( AbstractDistMatrix<T>& A, mpi::Comm const& comm, int rank );
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

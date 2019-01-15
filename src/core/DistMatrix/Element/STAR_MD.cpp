@@ -159,34 +159,34 @@ DM& DM::operator=(const ElementalMatrix<T>& A)
 // Basic queries
 // =============
 template <typename T, Device D>
-mpi::Comm DM::DistComm() const EL_NO_EXCEPT
+mpi::Comm const& DM::DistComm() const EL_NO_EXCEPT
 { return this->Grid().MDComm(); }
 template <typename T, Device D>
-mpi::Comm DM::CrossComm() const EL_NO_EXCEPT
+mpi::Comm const& DM::CrossComm() const EL_NO_EXCEPT
 { return this->Grid().MDPerpComm(); }
 template <typename T, Device D>
-mpi::Comm DM::RedundantComm() const EL_NO_EXCEPT
+mpi::Comm const& DM::RedundantComm() const EL_NO_EXCEPT
 { return (this->Grid().InGrid() ? mpi::COMM_SELF : mpi::COMM_NULL); }
 
 template <typename T, Device D>
-mpi::Comm DM::ColComm() const EL_NO_EXCEPT
+mpi::Comm const& DM::ColComm() const EL_NO_EXCEPT
 { return (this->Grid().InGrid() ? mpi::COMM_SELF : mpi::COMM_NULL); }
 template <typename T, Device D>
-mpi::Comm DM::RowComm() const EL_NO_EXCEPT
+mpi::Comm const& DM::RowComm() const EL_NO_EXCEPT
 { return this->Grid().MDComm(); }
 
 template <typename T, Device D>
-mpi::Comm DM::PartialColComm() const EL_NO_EXCEPT
+mpi::Comm const& DM::PartialColComm() const EL_NO_EXCEPT
 { return this->ColComm(); }
 template <typename T, Device D>
-mpi::Comm DM::PartialRowComm() const EL_NO_EXCEPT
+mpi::Comm const& DM::PartialRowComm() const EL_NO_EXCEPT
 { return this->RowComm(); }
 
 template <typename T, Device D>
-mpi::Comm DM::PartialUnionColComm() const EL_NO_EXCEPT
+mpi::Comm const& DM::PartialUnionColComm() const EL_NO_EXCEPT
 { return (this->Grid().InGrid() ? mpi::COMM_SELF : mpi::COMM_NULL); }
 template <typename T, Device D>
-mpi::Comm DM::PartialUnionRowComm() const EL_NO_EXCEPT
+mpi::Comm const& DM::PartialUnionRowComm() const EL_NO_EXCEPT
 { return (this->Grid().InGrid() ? mpi::COMM_SELF : mpi::COMM_NULL); }
 
 template <typename T, Device D>

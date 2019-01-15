@@ -37,8 +37,8 @@ const int THREAD_MULTIPLE = MPI_THREAD_MULTIPLE;
 const int UNDEFINED = MPI_UNDEFINED;
 
 const Comm COMM_NULL;
-const Comm COMM_SELF(MPI_COMM_SELF);
-const Comm COMM_WORLD(MPI_COMM_WORLD);
+const Comm COMM_SELF = MakeControllingComm(MPI_COMM_SELF);
+const Comm COMM_WORLD = MakeControllingComm(MPI_COMM_WORLD);
 
 const ErrorHandler ERRORS_RETURN = MPI_ERRORS_RETURN;
 const ErrorHandler ERRORS_ARE_FATAL = MPI_ERRORS_ARE_FATAL;
@@ -73,10 +73,6 @@ void Initialize( int& argc, char**& argv ) EL_NO_EXCEPT
     MPI_Init( &argc, &argv );
 #ifdef HYDROGEN_HAVE_ALUMINUM
     Al::Initialize(argc, argv);
-
-    // BLERG
-    const_cast<Comm&>(COMM_SELF) = MPI_COMM_SELF;
-    const_cast<Comm&>(COMM_WORLD) = MPI_COMM_WORLD;
 #endif // HYDROGEN_HAVE_ALUMINUM
 }
 
@@ -90,10 +86,6 @@ int InitializeThread( int& argc, char**& argv, int required ) EL_NO_EXCEPT
 
 #ifdef HYDROGEN_HAVE_ALUMINUM
     Al::Initialize(argc, argv);
-
-    // BLERG
-    const_cast<Comm&>(COMM_SELF) = MPI_COMM_SELF;
-    const_cast<Comm&>(COMM_WORLD) = MPI_COMM_WORLD;
 #endif // HYDROGEN_HAVE_ALUMINUM
 
     return provided;
@@ -175,9 +167,8 @@ EL_NO_RELEASE_EXCEPT
     EL_DEBUG_CSE;
     MPI_Comm tmp;
     EL_CHECK_MPI_CALL(
-        MPI_Comm_create( parentComm.GetMPIComm(), subsetGroup.group, &tmp );
-    );
-    subsetComm = Comm(tmp);
+        MPI_Comm_create(parentComm.GetMPIComm(), subsetGroup.group, &tmp));
+    subsetComm.Control(tmp);
 }
 
 void Dup( Comm const& original, Comm& duplicate ) EL_NO_RELEASE_EXCEPT
@@ -185,7 +176,7 @@ void Dup( Comm const& original, Comm& duplicate ) EL_NO_RELEASE_EXCEPT
     EL_DEBUG_CSE;
     MPI_Comm tmp;
     EL_CHECK_MPI_CALL( MPI_Comm_dup( original.GetMPIComm(), &tmp) );
-    duplicate = Comm(tmp);
+    duplicate.Control(tmp);
 }
 
 
@@ -195,22 +186,47 @@ void Split( Comm const& comm, int color, int key, Comm& newComm ) EL_NO_RELEASE_
     MPI_Comm tmp;
     EL_CHECK_MPI_CALL(
         MPI_Comm_split( comm.GetMPIComm(), color, key, &tmp ) );
-    newComm = Comm(tmp);
+    newComm.Control(tmp);
 }
 
 void Free( Comm& comm ) EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
-    comm.Free();
+    comm.Reset();
 }
+
+namespace /* <anon> */
+{
+bool RawCommCongruent(MPI_Comm comm_one, MPI_Comm comm_two) EL_NO_RELEASE_EXCEPT
+{
+    int result;
+    EL_CHECK_MPI_CALL(
+        MPI_Comm_compare(comm_one, comm_two, &result));
+    return ((result == MPI_IDENT) || (result == MPI_CONGRUENT));
+}
+}// namespace <anon>
 
 bool Congruent( Comm const& comm1, Comm const& comm2 ) EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
-    int result;
-    EL_CHECK_MPI_CALL(
-        MPI_Comm_compare( comm1.GetMPIComm(), comm2.GetMPIComm(), &result ) );
-    return ( result == MPI_IDENT || result == MPI_CONGRUENT );
+    return RawCommCongruent(comm1.GetMPIComm(), comm2.GetMPIComm());
+}
+
+bool CongruentToCommSelf( Comm const& comm ) EL_NO_RELEASE_EXCEPT
+{
+    return comm.Size() == 1;// RawCommCongruent(comm.GetMPIComm(), MPI_COMM_SELF);
+}
+
+bool CongruentToCommWorld( Comm const& comm ) EL_NO_RELEASE_EXCEPT
+{
+    int world_size;
+    EL_CHECK_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &world_size));
+    return comm.Size() == world_size;// RawCommCongruent(comm.GetMPIcomm, MPI_COMM_WORLD);
+}
+
+Comm NewWorldComm() EL_NO_RELEASE_EXCEPT
+{
+    return Comm{MPI_COMM_WORLD};
 }
 
 void ErrorHandlerSet( Comm const& comm, ErrorHandler errorHandler )
@@ -233,7 +249,7 @@ void CartCreate
         MPI_Cart_create(
             comm.GetMPIComm(), numDims, const_cast<int*>(dimensions),
             const_cast<int*>(periods), reorder, &tmp ) );
-    cartComm = Comm(tmp);
+    cartComm.Control(tmp);
 }
 
 // FIXME
@@ -245,7 +261,7 @@ EL_NO_RELEASE_EXCEPT
     EL_CHECK_MPI_CALL(
         MPI_Cart_sub(
             comm.GetMPIComm(), const_cast<int*>(remainingDims), &tmp));
-    subComm = Comm(tmp);
+    subComm.Control(tmp);
 }
 
 // Group manipulation
@@ -342,7 +358,7 @@ EL_NO_RELEASE_EXCEPT
     return newRank;
 }
 
-int Translate( Comm origComm, int origRank, Group newGroup )
+int Translate( Comm const& origComm, int origRank, Group newGroup )
 EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
@@ -351,7 +367,7 @@ EL_NO_RELEASE_EXCEPT
     return newRank;
 }
 
-int Translate( Group origGroup, int origRank, Comm newComm )
+int Translate( Group origGroup, int origRank, Comm const& newComm )
 EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
@@ -360,7 +376,7 @@ EL_NO_RELEASE_EXCEPT
     return newRank;
 }
 
-int Translate( Comm origComm, int origRank, Comm newComm )
+int Translate( Comm const& origComm, int origRank, Comm const& newComm )
 EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
@@ -380,9 +396,9 @@ void Translate
         newGroup.group, newRanks ) );
 }
 
-void Translate
-( Comm origComm,  int size, const int* origRanks,
-  Group newGroup,                 int* newRanks ) EL_NO_RELEASE_EXCEPT
+void Translate(
+    Comm const& origComm,  int size, const int* origRanks,
+    Group newGroup, int* newRanks ) EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
     Group origGroup;
@@ -391,9 +407,9 @@ void Translate
     Free( origGroup );
 }
 
-void Translate
-( Group origGroup,  int size, const int* origRanks,
-  Comm newComm,                     int* newRanks ) EL_NO_RELEASE_EXCEPT
+void Translate(
+    Group origGroup, int size, const int* origRanks,
+    Comm const& newComm, int* newRanks ) EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
     Group newGroup;
@@ -402,9 +418,9 @@ void Translate
     Free( newGroup  );
 }
 
-void Translate
-( Comm origComm,  int size, const int* origRanks,
-  Comm newComm,                   int* newRanks ) EL_NO_RELEASE_EXCEPT
+void Translate(
+    Comm const& origComm, int size, const int* origRanks,
+    Comm const& newComm, int* newRanks ) EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE;
     Group origGroup, newGroup;

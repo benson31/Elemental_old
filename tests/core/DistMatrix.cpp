@@ -249,7 +249,7 @@ int
 main(int argc, char* argv[])
 {
     Environment env(argc, argv);
-    mpi::Comm comm = mpi::COMM_WORLD;
+    mpi::Comm comm = mpi::NewWorldComm();
 
     try
     {
@@ -264,7 +264,7 @@ main(int argc, char* argv[])
         if (gridHeight == 0)
             gridHeight = Grid::DefaultHeight(mpi::Size(comm));
         const GridOrder order = colMajor ? COLUMN_MAJOR : ROW_MAJOR;
-        const Grid grid(comm, gridHeight, order);
+        const Grid grid(std::move(comm), gridHeight, order);
 
         DistMatrixTest<Int>(m, n, grid, print);
 
@@ -286,13 +286,13 @@ main(int argc, char* argv[])
 
 #ifdef EL_HAVE_MPC
         DistMatrixTest<BigInt>(m, n, grid, print);
-        OutputFromRoot(comm,"Setting BigInt precision to 512 bits");
+        OutputFromRoot(g.Comm(),"Setting BigInt precision to 512 bits");
         mpfr::SetMinIntBits(512);
         DistMatrixTest<BigInt>(m, n, grid, print);
 
         DistMatrixTest<BigFloat>(m, n, grid, print);
         DistMatrixTest<Complex<BigFloat>>(m, n, grid, print);
-        OutputFromRoot(comm,"Setting BigFloat precision to 512 bits");
+        OutputFromRoot(g.Comm(),"Setting BigFloat precision to 512 bits");
         mpfr::SetPrecision(512);
         DistMatrixTest<BigFloat>(m, n, grid, print);
         DistMatrixTest<Complex<BigFloat>>(m, n, grid, print);

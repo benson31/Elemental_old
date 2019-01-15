@@ -236,7 +236,7 @@ int
 main(int argc, char* argv[])
 {
     Environment env(argc, argv);
-    mpi::Comm comm = mpi::COMM_WORLD;
+    mpi::Comm comm = mpi::NewWorldComm();
 
 //    try
 //    {
@@ -265,13 +265,13 @@ main(int argc, char* argv[])
         if (gridHeight == 0)
             gridHeight = Grid::DefaultHeight(mpi::Size(comm));
         const GridOrder order = (colMajor ? COLUMN_MAJOR : ROW_MAJOR);
-        const Grid g(comm, gridHeight, order);
+        const Grid g(std::move(comm), gridHeight, order);
         const Orientation orientA = CharToOrientation(transA);
         const Orientation orientB = CharToOrientation(transB);
         SetBlocksize(nb);
 
         ComplainIfDebug();
-        OutputFromRoot(comm,"Will test Gemm",transA,transB);
+        OutputFromRoot(g.Comm(),"Will test Gemm",transA,transB);
 
 #ifdef HYDROGEN_HAVE_CUDA
         if (testGPU)

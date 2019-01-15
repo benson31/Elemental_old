@@ -140,7 +140,7 @@ int
 main(int argc, char* argv[])
 {
     Environment env(argc, argv);
-    mpi::Comm comm = mpi::COMM_WORLD;
+    mpi::Comm comm = mpi::NewWorldComm();
 
     try
     {
@@ -166,14 +166,14 @@ main(int argc, char* argv[])
         if(gridHeight == 0)
             gridHeight = Grid::DefaultHeight(mpi::Size(comm));
         const GridOrder order = (colMajor ? COLUMN_MAJOR : ROW_MAJOR);
-        const Grid g(comm, gridHeight, order);
+        const Grid g(std::move(comm), gridHeight, order);
         SetBlocksize(nb);
         ldimX = Max(m, ldimX);
         ldimY = Max(m, ldimY);
         ComplainIfDebug();
 
         // Message
-        OutputFromRoot(comm,"Testing Axpy");
+        OutputFromRoot(g.Comm(),"Testing Axpy");
 
 #ifdef HYDROGEN_HAVE_CUDA
         if (testGPU)

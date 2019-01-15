@@ -92,7 +92,7 @@ Base<Field> SymmetricFrobeniusNorm(UpperOrLower uplo, const Matrix<Field>& A)
 
 template<typename Real>
 Real NormFromScaledSquare
-(Real localScale, Real localScaledSquare, mpi::Comm comm)
+(Real localScale, Real localScaledSquare, mpi::Comm const& comm)
 {
     // Find the maximum relative scale
     const Real scale = mpi::AllReduce(localScale, mpi::MAX, comm,

@@ -14,7 +14,7 @@ namespace El {
 
 template<typename Field>
 void RowTwoNormsHelper
-( const Matrix<Field>& ALoc, Matrix<Base<Field>>& normsLoc, mpi::Comm comm )
+( const Matrix<Field>& ALoc, Matrix<Base<Field>>& normsLoc, mpi::Comm const& comm )
 {
     EL_DEBUG_CSE
     typedef Base<Field> Real;

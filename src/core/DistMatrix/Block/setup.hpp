@@ -565,11 +565,10 @@ void BDM::ProcessQueues(bool includeViewers)
 
     // Compute the metadata
     // ====================
-    mpi::Comm comm;
+    mpi::Comm const& comm = (includeViewers ? grid.ViewingComm() : grid.VCComm());
     vector<int> sendCounts, owners(totalSend);
     if(includeViewers)
     {
-        comm = grid.ViewingComm();
         const int viewingSize = mpi::Size(grid.ViewingComm());
         sendCounts.resize(viewingSize,0);
         for(Int k=0; k<totalSend; ++k)
@@ -586,7 +585,6 @@ void BDM::ProcessQueues(bool includeViewers)
     {
         if(!this->Participating())
             return;
-        comm = grid.VCComm();
         const int vcSize = mpi::Size(grid.VCComm());
         sendCounts.resize(vcSize,0);
         for(Int k=0; k<totalSend; ++k)
@@ -650,12 +648,11 @@ void BDM::ProcessPullQueue(T* pullBuf, bool includeViewers) const
 
     // Compute the metadata
     // ====================
-    mpi::Comm comm;
+    mpi::Comm const& comm = (includeViewers ? grid.ViewingComm() : grid.VCComm());
     int commSize;
     vector<int> recvCounts, owners(totalRecv);
     if(includeViewers)
     {
-        comm = grid.ViewingComm();
         commSize = mpi::Size(comm);
         recvCounts.resize(commSize,0);
         for(Int k=0; k<totalRecv; ++k)
@@ -674,7 +671,6 @@ void BDM::ProcessPullQueue(T* pullBuf, bool includeViewers) const
     {
         if(!this->Participating())
             return;
-        comm = grid.VCComm();
         commSize = mpi::Size(comm);
         recvCounts.resize(commSize,0);
         for(Int k=0; k<totalRecv; ++k)

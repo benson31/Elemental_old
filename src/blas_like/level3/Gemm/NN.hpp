@@ -49,8 +49,8 @@ void Cannon_NN
     const Int row = g.Row();
     const Int col = g.Col();
     const Int pSqrt = g.Height();
-    mpi::Comm rowComm = g.RowComm();
-    mpi::Comm colComm = g.ColComm();
+    mpi::Comm const& rowComm = g.RowComm();
+    mpi::Comm const& colComm = g.ColComm();
     if (A.Width() % pSqrt != 0)
         LogicError("For now, width(A) must be integer multiple of sqrt(p)");
 

@@ -13,7 +13,7 @@ namespace El
 {
 
 template<typename T, Device D>
-void Send(Matrix<T,D> const& A, mpi::Comm comm, int destination)
+void Send(Matrix<T,D> const& A, mpi::Comm const& comm, int destination)
 {
     EL_DEBUG_CSE
     const Int height = A.Height();
@@ -41,7 +41,7 @@ void Send(Matrix<T,D> const& A, mpi::Comm comm, int destination)
 }
 
 template <typename T>
-void Send(AbstractMatrix<T> const& A, mpi::Comm comm, int destination)
+void Send(AbstractMatrix<T> const& A, mpi::Comm const& comm, int destination)
 {
     switch (A.GetDevice())
     {
@@ -68,7 +68,7 @@ void Send(AbstractMatrix<T> const& A, mpi::Comm comm, int destination)
 
 #define PROTO(T)                                                        \
     EL_EXTERN template void Send(                                       \
-        const AbstractMatrix<T>& A, mpi::Comm comm, int rank );
+        const AbstractMatrix<T>& A, mpi::Comm const& comm, int rank );
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

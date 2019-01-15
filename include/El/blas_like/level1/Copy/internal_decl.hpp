@@ -26,7 +26,7 @@ template<typename T>
 void Exchange
 ( const ElementalMatrix<T>& A,
         ElementalMatrix<T>& B,
-  int sendRank, int recvRank, mpi::Comm comm );
+  int sendRank, int recvRank, mpi::Comm const& comm );
 
 template<typename T,Dist U,Dist V,Device D1, Device D2>
 void Translate( DistMatrix<T,U,V,ELEMENT,D1> const& A,

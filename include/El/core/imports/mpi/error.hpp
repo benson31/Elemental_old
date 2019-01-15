@@ -48,12 +48,23 @@ inline std::string GetErrorString(int mpi_error_code)
     return errorString;
 }
 
+
 /** @class MpiException
  *  @brief An error from an MPI call
  */
 class MpiException : public std::runtime_error
 {
 public:
+
+    /** @brief Construct an MPI exception given the salient pieces of data.
+     *
+     *  @param mpi_error_code The return-value from an MPI call
+     *  @param function The name of the function from which the error has
+     *         occurred.
+     *  @param file The name of the file in which the error has occurred.
+     *  @param line The line number in the file at which the error has
+     *         occurred.
+     */
     MpiException(int mpi_error_code,
                  std::string const& function,
                  std::string const& file,
@@ -81,10 +92,18 @@ private:
     int mpi_error_code_;
 };// class MpiError
 
+
 /** @brief Indicate an MPI error has occurred.
  *
  *  The main value of this function is providing a hook for debuggers
  *  and an explicit stack frame.
+ *
+ *  @param mpi_error_code The return-value from an MPI call
+ *  @param function The name of the function from which the error has
+ *         occurred.
+ *  @param file The name of the file in which the error has occurred.
+ *  @param line The line number in the file at which the error has
+ *         occurred.
  */
 inline void MpiError(
     int mpi_error_code, std::string const& function,

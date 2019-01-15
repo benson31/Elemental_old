@@ -65,53 +65,23 @@ using SharedPtrCommTuple = typename SharedPtrCommTupleT<T>::type;
 template <typename T>
 using PlainType = typename std::decay<T>::type;
 
-template <typename... Ts>
-void ResetAll_impl(std::tuple<Ts...>&, IndexSequence<>)
-{}
-
-template <typename... Ts, size_t I, size_t... Is>
-void ResetAll_impl(std::tuple<Ts...>& tup, IndexSequence<I,Is...>)
-{
-    auto& container = std::get<I>(tup);
-
-    // Delete all contents
-    PlainType<decltype(container)>{}.swap(container);
-
-    ResetAll_impl(tup, IndexSequence<Is...>{});
-}
-
-/** @brief Reset all @c shared_ptr objects in the tuple to nullptr.
- *
- *  Generates a compile-time loop to call @c reset() on each member of the tuple.
- *
- *  @param tup The tuple of pointers.
- *
- *  @todo Could be generalized to other pointer types. Currently no
- *        need and it's not without overhead.
- */
-template <typename... Ts>
-void ResetAll(std::tuple<Ts...>& tup)
-{
-    ResetAll_impl(tup, MakeIndexSequence<sizeof...(Ts)>{});
-}
-
 // Should go in SyncInfo stuff, but not 100% sure about this.
-inline bool SyncInfoSame(SyncInfo<Device::CPU> const&,
-                         SyncInfo<Device::CPU> const&) EL_NO_EXCEPT
+inline bool SyncInfoEquiv(SyncInfo<Device::CPU> const&,
+                          SyncInfo<Device::CPU> const&) EL_NO_EXCEPT
 {
     return true;
 }
 
 #ifdef HYDROGEN_HAVE_CUDA
-inline bool SyncInfoSame(SyncInfo<Device::GPU> const& a,
-                         SyncInfo<Device::GPU> const& b) EL_NO_EXCEPT
+inline bool SyncInfoEquiv(SyncInfo<Device::GPU> const& a,
+                          SyncInfo<Device::GPU> const& b) EL_NO_EXCEPT
 {
     return a.stream_ == b.stream_;
 }
 #endif
 
 template <Device D1, Device D2, typename=DisableIf<SameDevice<D1,D2>>>
-bool SyncInfoSame(SyncInfo<D1> const&, SyncInfo<D2> const&) EL_NO_EXCEPT
+bool SyncInfoEquiv(SyncInfo<D1> const&, SyncInfo<D2> const&) EL_NO_EXCEPT
 {
     return false;
 }
@@ -135,28 +105,58 @@ class AluminumComm
 
 public:
 
+    /** @name Constructors */
+    ///@{
+
     AluminumComm() = default;
+
+    /** @brief Construct an AluminumComm with the same group as this MPI_Comm. */
     AluminumComm(MPI_Comm comm)
         : CommImpl<AluminumComm>{comm}
     {}
 
-    /** @brief Reset all the internal state. */
-    void DoReset() EL_NO_EXCEPT
+    AluminumComm(AluminumComm&&) = default;
+    AluminumComm& operator=(AluminumComm&&) = default;
+
+    ///@}
+    /** @name CRTP functions. */
+    ///@{
+
+    /** @brief Reset all the internal state.
+     *
+     *  Required by CRTP.
+     */
+    void DoReset()
     {
-        internal::ResetAll(al_comms_);
+        comm_tuple_type{}.swap(al_comms_);
     }
 
-    template <typename BackendT>
-    typename BackendT::comm_type& GetComm() const
+    /** @brief Swap internal state.
+     *
+     *  @param other The source with which to swap internals.
+     */
+    void DoSwap(AluminumComm& other) EL_NO_EXCEPT
     {
-        static_assert(
-            DeviceForBackend<BackendT>() == Device::CPU,
-            "Requires CPU backend for this compatibility function.");
-        return GetComm<BackendT>(SyncInfo<DeviceForBackend<BackendT>()>{});
+        std::swap(al_comms_, other.al_comms_);
     }
 
+    ///@}
+    /** @name Aluminum-specific functions. */
+    ///@{
+
+    /** @brief Get a reference to the communicator for a given
+     *         backend.
+     *
+     *  @param syncinfo The synchronization mechanism associated with
+     *         the desired compiler.
+     *
+     *  @tparam The backend for which to pull a communicator.
+     *
+     *  @return The Aluminum communicator for the given backend that
+     *          synchronizes on the specified SyncInfo object.
+     */
     template <typename BackendT, Device D>
-    typename BackendT::comm_type&
+    typename BackendT::comm_type /*const*/&
     GetComm(SyncInfo<D> const& syncinfo) const
     {
         using comm_type = typename BackendT::comm_type;
@@ -172,7 +172,7 @@ public:
             std::begin(comm_map), std::end(comm_map),
             [&syncinfo](value_type const& x)
             {
-                return internal::SyncInfoSame(x.first, syncinfo);
+                return internal::SyncInfoEquiv(x.first, syncinfo);
             });
 
         // FIXME (trb): Exposes the forward_list detail
@@ -187,6 +187,8 @@ public:
 
         return *it->second;
     }
+
+    ///@}
 
 private:
     template <typename CommT>

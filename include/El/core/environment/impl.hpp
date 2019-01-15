@@ -240,7 +240,7 @@ void Output( const ArgPack& ... args )
 }
 
 template<typename... ArgPack>
-void OutputFromRoot( mpi::Comm comm, const ArgPack& ... args )
+void OutputFromRoot( mpi::Comm const& comm, const ArgPack& ... args )
 {
     if( mpi::Rank(comm) == 0 )
     {
@@ -262,7 +262,7 @@ T Scan( const vector<T>& counts, vector<T>& offsets )
 }
 
 template<typename T>
-void EnsureConsistent( T alpha, mpi::Comm comm, string name )
+void EnsureConsistent( T alpha, mpi::Comm const& comm, string name )
 {
     string tag = ( name=="" ? "" : name+" " );
     const int commSize = mpi::Size( comm );

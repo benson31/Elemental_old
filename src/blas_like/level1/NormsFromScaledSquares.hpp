@@ -16,7 +16,7 @@ void NormsFromScaledSquares
 ( const Matrix<Real>& localScales,
         Matrix<Real>& localScaledSquares,
         Matrix<Real>& normsLoc,
-        mpi::Comm comm )
+        mpi::Comm const& comm )
 {
     EL_DEBUG_CSE
     const Int nLocal = localScales.Height();

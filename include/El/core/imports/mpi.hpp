@@ -207,6 +207,10 @@ void Free( Comm& comm ) EL_NO_RELEASE_EXCEPT;
 bool Congruent( Comm const& comm1, Comm const& comm2 ) EL_NO_RELEASE_EXCEPT;
 void ErrorHandlerSet
 ( Comm const& comm, ErrorHandler errorHandler ) EL_NO_RELEASE_EXCEPT;
+bool CongruentToCommSelf( Comm const& comm ) EL_NO_RELEASE_EXCEPT;
+bool CongruentToCommWorld( Comm const& comm ) EL_NO_RELEASE_EXCEPT;
+
+Comm NewWorldComm() EL_NO_RELEASE_EXCEPT;
 
 // Cartesian communicator routines
 void CartCreate
@@ -232,23 +236,24 @@ bool Congruent( Group group1, Group group2 ) EL_NO_RELEASE_EXCEPT;
 int Translate
 ( Group origGroup, int origRank, Group newGroup ) EL_NO_RELEASE_EXCEPT;
 int Translate
-( Comm  origComm,  int origRank, Group newGroup ) EL_NO_RELEASE_EXCEPT;
+( Comm const& origComm,  int origRank, Group newGroup ) EL_NO_RELEASE_EXCEPT;
 int Translate
-( Group origGroup, int origRank, Comm  newComm  ) EL_NO_RELEASE_EXCEPT;
-int Translate
-( Comm  origComm,  int origRank, Comm  newComm  ) EL_NO_RELEASE_EXCEPT;
+( Group origGroup, int origRank, Comm const& newComm ) EL_NO_RELEASE_EXCEPT;
+int Translate(
+    Comm const& origComm,  int origRank,
+    Comm const& newComm ) EL_NO_RELEASE_EXCEPT;
 void Translate
 ( Group origGroup, int size, const int* origRanks,
-  Group newGroup,                  int* newRanks ) EL_NO_RELEASE_EXCEPT;
+  Group newGroup, int* newRanks ) EL_NO_RELEASE_EXCEPT;
 void Translate
-( Comm origComm,  int size, const int* origRanks,
-  Group newGroup,                 int* newRanks ) EL_NO_RELEASE_EXCEPT;
+( Comm const& origComm,  int size, const int* origRanks,
+  Group newGroup, int* newRanks ) EL_NO_RELEASE_EXCEPT;
 void Translate
 ( Group origGroup, int size, const int* origRanks,
-  Comm newComm,                    int* newRanks ) EL_NO_RELEASE_EXCEPT;
+  Comm const& newComm, int* newRanks ) EL_NO_RELEASE_EXCEPT;
 void Translate
-( Comm origComm, int size, const int* origRanks,
-  Comm newComm,                  int* newRanks ) EL_NO_RELEASE_EXCEPT;
+( Comm const& origComm, int size, const int* origRanks,
+  Comm const& newComm, int* newRanks ) EL_NO_RELEASE_EXCEPT;
 
 // Utilities
 void Barrier( Comm const& comm=COMM_WORLD ) EL_NO_RELEASE_EXCEPT;

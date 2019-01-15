@@ -1,6 +1,8 @@
 #ifndef HYDROGEN_IMPORTS_ALUMINUM_HPP_
 #define HYDROGEN_IMPORTS_ALUMINUM_HPP_
 
+#include <El/core/Device.hpp>
+
 #ifdef HYDROGEN_HAVE_ALUMINUM
 #include <Al.hpp>
 #endif // HYDROGEN_HAVE_ALUMINUM

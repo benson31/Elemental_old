@@ -269,7 +269,7 @@ int main(int argc, char *argv[])
         // If no process grid height was specified, try for a square
         if (gridHeight == 0)
             gridHeight = El::Grid::DefaultHeight(commSize);
-        El::Grid grid(El::mpi::COMM_WORLD, gridHeight);
+        El::Grid grid(El::mpi::NewWorldComm(), gridHeight);
         if (commRank == 0)
             El::Output("grid is ",grid.Height()," x ",grid.Width());
 

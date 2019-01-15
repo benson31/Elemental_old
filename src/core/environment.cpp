@@ -129,7 +129,7 @@ void Initialize( int& argc, char**& argv )
         return;
     }
 
-    ::args = new Args( argc, argv );
+    ::args = new Args( argc, argv, mpi::COMM_WORLD, std::cerr );
 
 #ifdef HYDROGEN_HAVE_CUDA
     InitializeCUDA(argc, argv);
