@@ -300,6 +300,25 @@ void SetUserReduceFunc
         Types<T>::userFunc = func;
 }
 
+// This function ensures that the collective comm duplications have a
+// chance to happen collectively. The onus is on the developer to
+// ensure that they actually happen.
+template <typename T, Collective C, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,C>>>
+inline void EnsureComm(Comm const& comm, SyncInfo<D> const& syncInfo)
+{
+    using Backend = BestBackend<T,D,C>;
+    comm.template GetComm<Backend>(syncInfo);
+}
+
+template <typename T, Collective C, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,C>>,
+          typename=void>
+inline void EnsureComm(Comm const&, SyncInfo<D> const&)
+{
+    // DO NOTHING
+}
+
 // Point-to-point communication
 // ============================
 

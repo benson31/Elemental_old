@@ -56,9 +56,18 @@
 #include <quadmath.h>
 #endif
 
+#ifdef HYDROGEN_HAVE_HALF
+#include <half.hpp>
+#endif
+
 namespace El {
 
 typedef unsigned char byte;
+
+// 16-bit floating-point types
+#ifdef HYDROGEN_HAVE_HALF
+using cpu_half_type = half_float::half;
+#endif
 
 // If these are changes, you must make sure that they have
 // existing MPI datatypes. This is only sometimes true for 'long long'
@@ -124,6 +133,9 @@ template<> struct IsScalar<double>
 { static const bool value=true; };
 template<> struct IsScalar<long double>
 { static const bool value=true; };
+#ifdef HYDROGEN_HAVE_HALF
+template <> struct IsScalar<cpu_half_type> : std::true_type {};
+#endif
 #ifdef HYDROGEN_HAVE_QD
 template<> struct IsScalar<DoubleDouble>
 { static const bool value=true; };
@@ -153,6 +165,9 @@ template<> struct IsField<double>
 { static const bool value=true; };
 template<> struct IsField<long double>
 { static const bool value=true; };
+#ifdef HYDROGEN_HAVE_HALF
+template <> struct IsField<cpu_half_type> : std::true_type {};
+#endif
 #ifdef HYDROGEN_HAVE_QD
 template<> struct IsField<DoubleDouble>
 { static const bool value=true; };
@@ -192,6 +207,10 @@ template<> struct IsStdScalar<double>
 { static const bool value=true; };
 template<> struct IsStdScalar<long double>
 { static const bool value=true; };
+#ifdef HYDROGEN_HAVE_HALF
+// This should work via ADL
+template <> struct IsStdScalar<cpu_half_type> : std::true_type {};
+#endif
 #ifdef HYDROGEN_HAVE_QUADMATH
 template<> struct IsStdScalar<Quad>
 { static const bool value=true; };
@@ -209,6 +228,9 @@ template<> struct IsStdField<double>
 { static const bool value=true; };
 template<> struct IsStdField<long double>
 { static const bool value=true; };
+#ifdef HYDROGEN_HAVE_HALF
+template <> struct IsStdField<cpu_half_type> : std::true_type {};
+#endif
 #ifdef HYDROGEN_HAVE_QUADMATH
 template<> struct IsStdField<Quad>
 { static const bool value=true; };

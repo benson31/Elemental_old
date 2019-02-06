@@ -87,10 +87,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 # Add warning flags
 include(CheckCXXCompilerFlag)
 macro (add_cxx_flag_as_library FLAG_LIST_VAR FLAG)
-  add_library(flag${FLAG} INTERFACE)
-  target_compile_options(
-    flag${FLAG} INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
-  LIST(APPEND ${FLAG_LIST_VAR} flag${FLAG})
+  LIST(APPEND ${FLAG_LIST_VAR} $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
 endmacro()
 
 LIST(APPEND INITIAL_CXX_FLAGS
@@ -157,6 +154,20 @@ endif ()
 #
 # MEMORY-RELATED OPTIONS
 #
+
+option(Hydrogen_ENABLE_HALF
+  "Enable the use of \"half\" library." OFF)
+# This refers to the half.sourceforge.net type "half"
+
+option(Hydrogen_ENABLE_BFLOAT16
+  "Enable the use of Intel's bfloat16 type." OFF)
+if (Hydrogen_ENABLE_BFLOAT16)
+  message(WARNING
+    "At time of writing, we are unaware of any implementation "
+    "of the \"bfloat16\". This is a placeholder option. If our "
+    "information is out of date, please open an issue and point "
+    "us to an implementation.")
+endif ()
 
 option(Hydrogen_USE_64BIT_INTS
   "Use 64-bit integers for internal indexing" OFF)
@@ -284,6 +295,11 @@ endif ()
 #
 # Check the compiler features
 #
+
+if (Hydrogen_ENABLE_HALF)
+  find_package(HALF REQUIRED)
+  set(HYDROGEN_HAVE_HALF TRUE)
+endif ()
 
 if (Hydrogen_ENABLE_CUDA)
 
@@ -440,9 +456,10 @@ target_include_directories(Hydrogen PUBLIC
 # These flags don't need to be propagated. Just because Hydrogen is
 # built with "-Werror", for instance, doesn't mean downstreams should
 # be forced to build with that (even though they maybe should)...
-target_link_libraries(Hydrogen PRIVATE ${EXTRA_CXX_FLAGS})
+target_compile_options(Hydrogen PRIVATE ${EXTRA_CXX_FLAGS})
 
 target_link_libraries(Hydrogen PUBLIC ${Aluminum_LIBRARIES})
+target_link_libraries(Hydrogen PUBLIC ${HALF_LIBRARIES})
 
 if (TARGET OpenMP::OpenMP_CXX)
   target_link_libraries(Hydrogen PUBLIC OpenMP::OpenMP_CXX)

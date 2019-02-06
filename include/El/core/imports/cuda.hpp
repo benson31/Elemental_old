@@ -3,6 +3,7 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <cuda_fp16.h>
 #include <cublas_v2.h>
 
 #include <stdexcept>
@@ -11,6 +12,9 @@
 
 namespace El
 {
+
+using gpu_half_type = __half;
+// TODO: __half2?
 
 /** CudaError
  *  Exception class for CUDA errors.
@@ -60,14 +64,13 @@ struct CudaError : std::runtime_error
 #define EL_FORCE_CHECK_CUDA_NOSYNC(cuda_call)                           \
     do                                                                  \
     {                                                                   \
-        /* Call CUDA API routine, synchronizing before and after to */  \
-        /* check for errors. */                                         \
+        /* Call CUDA API routine, and check for errors without */       \
+        /* synchronizing. */                                            \
         cudaError_t status_CHECK_CUDA = cuda_call ;                     \
         if( status_CHECK_CUDA != cudaSuccess ) {                        \
             cudaDeviceReset();                                          \
             throw CudaError(status_CHECK_CUDA,__FILE__,__LINE__,false); \
         }                                                               \
-        EL_CUDA_SYNC(false);                                            \
     } while (0)
 #define EL_LAUNCH_CUDA_KERNEL(kernel, Dg, Db, Ns, S, args)      \
     do                                                          \
@@ -91,7 +94,7 @@ struct CudaError : std::runtime_error
     while (0)
 
 #ifdef EL_RELEASE
-#define EL_CHECK_CUDA( cuda_call ) cuda_call
+#define EL_CHECK_CUDA( cuda_call ) EL_FORCE_CHECK_CUDA_NOSYNC(cuda_call)
 #define EL_CHECK_CUDA_KERNEL(kernel, Dg, Db, Ns, S, args) \
   EL_LAUNCH_CUDA_KERNEL(kernel, Dg, Db, Ns, S, args)
 #else

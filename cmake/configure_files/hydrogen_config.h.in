@@ -11,7 +11,9 @@
 #cmakedefine HYDROGEN_BLAS_SUFFIX @HYDROGEN_BLAS_SUFFIX@
 #cmakedefine HYDROGEN_LAPACK_SUFFIX @HYDROGEN_LAPACK_SUFFIX@
 
-// MKL stuff
+// 16-bit floating point stuff
+#cmakedefine HYDROGEN_HAVE_HALF
+#cmakedefine HYDROGEN_HAVE_BFLOAT16
 
 // Extended Precision stuff
 #cmakedefine HYDROGEN_HAVE_QUADMATH
@@ -20,6 +22,7 @@
 
 #cmakedefine HYDROGEN_HAVE_LAPACK
 
+// MKL stuff
 #cmakedefine HYDROGEN_HAVE_MKL
 #cmakedefine HYDROGEN_HAVE_MKL_GEMMT
 

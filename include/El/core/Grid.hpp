@@ -16,10 +16,8 @@ class Grid
 {
 public:
     Grid();
-    explicit Grid(mpi::Comm comm);
-    explicit Grid(mpi::Comm comm, GridOrder order);
-    explicit Grid(mpi::Comm comm, int height);
-    explicit Grid(mpi::Comm comm, int height, GridOrder order);
+    explicit Grid(mpi::Comm comm, GridOrder order=COLUMN_MAJOR);
+    explicit Grid(mpi::Comm comm, int height, GridOrder order=COLUMN_MAJOR);
     ~Grid();
 
     // Simple interface (simpler version of distributed-based interface)

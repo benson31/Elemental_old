@@ -36,6 +36,9 @@ template<> std::string TypeName<long int>();
 template<> std::string TypeName<long long int>();
 template<> std::string TypeName<float>();
 template<> std::string TypeName<double>();
+#ifdef HYDROGEN_HAVE_HALF
+template<> std::string TypeName<cpu_half_type>();
+#endif
 #ifdef HYDROGEN_HAVE_QD
 template<> std::string TypeName<DoubleDouble>();
 template<> std::string TypeName<QuadDouble>();
@@ -86,6 +89,9 @@ template<> struct IsPacked<float>
 { static const bool value=true; };
 template<> struct IsPacked<double>
 { static const bool value=true; };
+#ifdef HYDROGEN_HAVE_HALF
+template <> struct IsPacked<cpu_half_type> : std::true_type {};
+#endif
 #ifdef HYDROGEN_HAVE_QD
 template<> struct IsPacked<DoubleDouble>
 { static const bool value=true; };
@@ -182,6 +188,9 @@ template<> struct IsData<Unsigned> { static const bool value=true; };
 template<> struct IsData<Int> { static const bool value=true; };
 template<> struct IsData<float> { static const bool value=true; };
 template<> struct IsData<double> { static const bool value=true; };
+#ifdef HYDROGEN_HAVE_HALF
+template <> struct IsData<cpu_half_type> : std::true_type {};
+#endif
 #ifdef HYDROGEN_HAVE_QD
 template<> struct IsData<DoubleDouble> { static const bool value=true; };
 template<> struct IsData<QuadDouble> { static const bool value=true; };

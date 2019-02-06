@@ -67,16 +67,8 @@ Grid::Grid()
     : Grid{mpi::NewWorldComm()}
 {}
 
-Grid::Grid(mpi::Comm comm)
-    : Grid{std::move(comm), COLUMN_MAJOR}
-{}
-
 Grid::Grid(mpi::Comm comm, GridOrder order)
-    : Grid{std::move(comm), DefaultHeight(comm.Size()), order}
-{}
-
-Grid::Grid(mpi::Comm comm, int height)
-    : Grid{std::move(comm), height, COLUMN_MAJOR}
+    : Grid{std::move(comm), -1, order}
 {}
 
 Grid::Grid(mpi::Comm comm, int height, GridOrder order)
@@ -93,7 +85,7 @@ Grid::Grid(mpi::Comm comm, int height, GridOrder order)
     // All processes own the grid, so we have to trivially split viewingGroup_
     owningGroup_ = viewingGroup_;
 
-    height_ = height;
+    height_ = (height <= 0 ? DefaultHeight(size_) : height);
     if( height_ < 0 )
         LogicError("Process grid dimensions must be non-negative");
 

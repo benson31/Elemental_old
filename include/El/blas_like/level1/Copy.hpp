@@ -578,6 +578,13 @@ EL_EXTERN template void CopyAsync
 ( const Matrix<double,Device::CPU>& A, Matrix<double,Device::GPU>& B );
 #endif // HYDROGEN_HAVE_CUDA
 
+#ifdef HYDROGEN_HAVE_HALF
+EL_EXTERN template void Copy(
+    const AbstractMatrix<cpu_half_type>& A, AbstractMatrix<cpu_half_type>& B );
+EL_EXTERN template void Copy(
+    const Matrix<cpu_half_type>& A, Matrix<cpu_half_type>& B );
+#endif // HYDROGEN_HAVE_HALF
+
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD

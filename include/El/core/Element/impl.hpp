@@ -85,7 +85,7 @@ void RealPart( const Complex<Real>& alpha, Real& alphaReal ) EL_NO_EXCEPT
 template<typename Real,
          typename/*=EnableIf<IsReal<Real>>*/>
 Real ImagPart( const Real& alpha ) EL_NO_EXCEPT
-{ return 0; }
+{ return Real{0}; }
 template<typename Real>
 Real ImagPart( const Complex<Real>& alpha ) EL_NO_EXCEPT
 { return alpha.imag(); }
@@ -370,7 +370,7 @@ TBase Pow( const TBase& alpha, const TExp& beta )
     const TBase alpha_to_even =
       ( halfEven == static_cast<TExp>(0) ? 1 : Pow( alpha*alpha, halfEven ) );
     if( beta == 2*halfEven )
-        return alpha_to_even; 
+        return alpha_to_even;
     else
         return alpha_to_even*alpha;
 }

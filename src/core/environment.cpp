@@ -143,7 +143,7 @@ void Initialize( int& argc, char**& argv )
             LogicError
             ("Cannot initialize elemental after finalizing MPI");
         }
-#ifdef EL_HYBRID
+
         const Int provided =
             mpi::InitializeThread
             ( argc, argv, mpi::THREAD_MULTIPLE );
@@ -153,21 +153,16 @@ void Initialize( int& argc, char**& argv )
             cerr << "WARNING: Could not achieve THREAD_MULTIPLE support."
                  << endl;
         }
-#else
-        mpi::Initialize( argc, argv );
-#endif
         ::elemInitializedMpi = true;
     }
     else
     {
-#ifdef EL_HYBRID
         const Int provided = mpi::QueryThread();
         if( provided != mpi::THREAD_MULTIPLE )
         {
             throw std::runtime_error
             ("MPI initialized with inadequate thread support for Elemental");
         }
-#endif
     }
 
 #ifdef HYDROGEN_HAVE_CUDA

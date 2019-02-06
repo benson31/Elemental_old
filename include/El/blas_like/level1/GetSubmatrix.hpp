@@ -337,6 +337,25 @@ void GetSubmatrix
     const vector<Int>& J, \
           AbstractDistMatrix<T>& ASub );
 
+#ifdef HYDROGEN_HAVE_HALF
+EL_EXTERN template void GetSubmatrix(
+    const Matrix<cpu_half_type>& A,
+    Range<Int> I, Range<Int> J,
+    Matrix<cpu_half_type>& ASub );
+EL_EXTERN template void GetSubmatrix(
+    const Matrix<cpu_half_type>& A,
+    const Range<Int> I, const vector<Int>& J,
+    Matrix<cpu_half_type>& ASub );
+EL_EXTERN template void GetSubmatrix(
+    const Matrix<cpu_half_type>& A,
+    const vector<Int>& I, const Range<Int> J,
+    Matrix<cpu_half_type>& ASub );
+EL_EXTERN template void GetSubmatrix(
+    const Matrix<cpu_half_type>& A,
+    const vector<Int>& I, const vector<Int>& J,
+    Matrix<cpu_half_type>& ASub );
+#endif /* HYDROGEN_HAVE_HALF */
+
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD

@@ -39,6 +39,20 @@ else()
 endif()
 
 # Fix the imported target
+
+# FIXME (trb): We should split the library into language-specific
+# targets. That is, the .cu files should never need MPI linkage or
+# OpenMP, so they should be built into a separate target without
+# MPI::MPI_CXX or OpenMP::OpenMP_CXX "linkage".
+get_target_property(
+  __mpi_compile_options MPI::MPI_CXX INTERFACE_COMPILE_OPTIONS)
+if (__mpi_compile_options)
+  set_property(TARGET MPI::MPI_CXX PROPERTY
+    INTERFACE_COMPILE_OPTIONS
+    $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
+  unset(__mpi_compile_options)
+endif ()
+
 get_property(_TMP_MPI_LINK_LIBRARIES TARGET MPI::MPI_CXX
   PROPERTY INTERFACE_LINK_LIBRARIES)
 foreach(lib IN LISTS _TMP_MPI_LINK_LIBRARIES)
