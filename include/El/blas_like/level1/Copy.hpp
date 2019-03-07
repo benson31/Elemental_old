@@ -134,7 +134,7 @@ void Copy(const Matrix<T,Device::GPU>& A, Matrix<T,Device::GPU>& B)
                           ABuf, ldA*sizeof(T),
                           height*sizeof(T), width,
                           cudaMemcpyDeviceToDevice,
-                          syncInfoB.stream_));
+                          syncInfoB.Stream()));
 }
 
 // These inter-device copy functions are SYNCHRONOUS with respect to
@@ -154,7 +154,7 @@ void Copy(Matrix<T,Device::CPU> const& A, Matrix<T,Device::GPU>& B)
 
     SyncInfo<Device::GPU> syncInfoB = SyncInfoFromMatrix(B);
     InterDeviceCopy<Device::CPU,Device::GPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, syncInfoB.stream_);
+        BBuf, ldB, ABuf, ldA, height, width, syncInfoB.Stream());
     Synchronize(syncInfoB); // Is this necessary??
 }
 
@@ -173,7 +173,7 @@ void Copy(Matrix<T,Device::GPU> const& A, Matrix<T,Device::CPU>& B)
 
     SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(A);
     InterDeviceCopy<Device::GPU,Device::CPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, syncInfoA.stream_);
+        BBuf, ldB, ABuf, ldA, height, width, syncInfoA.Stream());
     Synchronize(syncInfoA); // Is this necessary??
 }
 

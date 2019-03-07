@@ -52,6 +52,10 @@ void Scale( S alphaS, AbstractMatrix<T>& A )
     {
         Zero( A );
     }
+    else if (alpha == T(1))
+    {
+        return;
+    }
     else
     {
         switch (A.GetDevice())
@@ -80,7 +84,12 @@ void Scale( S alphaS, AbstractMatrix<T>& A )
 #ifdef HYDROGEN_HAVE_CUDA
         case Device::GPU:
             gpu_details::Scale(alpha, ABuf, height, width, ALDim);
+
+            // Restore the "default" stream
+            EL_CHECK_CUBLAS(
+                cublasSetStream(GPUManager::cuBLASHandle(), old_stream));
             break;
+        }
 #endif // HYDROGEN_HAVE_CUDA
         default:
             LogicError("Bad device type in Scale");

@@ -9,16 +9,16 @@ template <typename T, Device D>
 class simple_buffer
 {
 public:
-    simple_buffer() = default;
+    //simple_buffer() = default;
 
     // Construct uninitialized memory of a given size
     explicit simple_buffer(size_t size,
-                           SyncInfo<D> const& = SyncInfo<D>{},
+                           SyncInfo<D> const&,// = SyncInfo<D>{},
                            unsigned int mode = DefaultMemoryMode<D>());
 
     // Construct and initialize memory of a given size
     explicit simple_buffer(size_t size, T const& value,
-                           SyncInfo<D> const& = SyncInfo<D>{},
+                           SyncInfo<D> const&,// = SyncInfo<D>{},
                            unsigned int mode = DefaultMemoryMode<D>());
     // Enable moves
     simple_buffer(simple_buffer<T,D>&&) = default;
@@ -61,7 +61,7 @@ void setBufferToValue(T* buffer, size_t size, T const& value,
     if( value == T(0) )
     {
         EL_CHECK_CUDA(cudaMemsetAsync(buffer, 0x0, size*sizeof(T),
-                                      syncInfo.stream_));
+                                      syncInfo.Stream()));
     }
     else
     {
@@ -70,7 +70,7 @@ void setBufferToValue(T* buffer, size_t size, T const& value,
             cudaMemcpyAsync(
                 buffer, tmp.data(), size*sizeof(T),
                 CUDAMemcpyKind<Device::CPU,Device::GPU>(),
-                syncInfo.stream_));
+                syncInfo.Stream()));
     }
     AddSynchronizationPoint(syncInfo);
 }

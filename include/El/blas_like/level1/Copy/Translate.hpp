@@ -45,7 +45,9 @@ void Translate(
         return;
 
     SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
-    //SyncInfo<D2> syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
+    SyncInfo<D2> syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
+
+    auto syncHelper = MakeMultiSync(syncInfoA, syncInfoB);
 
     const bool aligned = colAlign == B.ColAlign() && rowAlign == B.RowAlign();
     if(aligned && root == B.Root())
@@ -67,7 +69,7 @@ void Translate(
         const Int maxWidth  = MaxLength(width,  rowStride);
         const Int pkgSize = mpi::Pad(maxHeight*maxWidth);
 
-        simple_buffer<T,D1> buffer;
+        simple_buffer<T,D1> buffer(0, syncInfoA);;
         if(crossRank == root || crossRank == B.Root())
             buffer.allocate(pkgSize);
 

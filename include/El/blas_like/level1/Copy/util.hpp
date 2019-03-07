@@ -256,14 +256,14 @@ void InterleaveMatrix(
                               A, rowStrideA*sizeof(T),
                               height*sizeof(T), width,
                               cudaMemcpyDeviceToDevice,
-                              syncInfo.stream_));
+                              syncInfo.Stream()));
     }
     else
     {
         Copy_GPU_impl(height, width,
                       A, colStrideA, rowStrideA,
                       B, colStrideB, rowStrideB,
-                      syncInfo.stream_);
+                      syncInfo.Stream());
     }
 }
 
@@ -284,7 +284,7 @@ void RowStridedPack(
                               A+rowShift*ALDim, rowStride*ALDim*sizeof(T),
                               height*sizeof(T), localWidth,
                               cudaMemcpyDeviceToDevice,
-                              syncInfo.stream_));
+                              syncInfo.Stream()));
     }
 }
 
@@ -305,7 +305,7 @@ void RowStridedUnpack(
                               APortions+k*portionSize, height*sizeof(T),
                               height*sizeof(T), localWidth,
                               cudaMemcpyDeviceToDevice,
-                              syncInfo.stream_));
+                              syncInfo.Stream()));
     }
 }
 
@@ -330,7 +330,7 @@ void PartialRowStridedPack(
                           A + rowOffset*ALDim, rowStrideUnion*ALDim*sizeof(T),
                           height*sizeof(T), localWidth,
                           cudaMemcpyDeviceToDevice,
-                          syncInfo.stream_));
+                          syncInfo.Stream()));
     }
 }
 
@@ -355,7 +355,7 @@ void PartialRowStridedUnpack(
                           APortions + k*portionSize, height*sizeof(T),
                           height*sizeof(T), localWidth,
                           cudaMemcpyDeviceToDevice,
-                          syncInfo.stream_));
+                          syncInfo.Stream()));
     }
 }
 

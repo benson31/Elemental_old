@@ -46,7 +46,7 @@ void InterleaveMatrixUpdate(
     EL_DEBUG_CSE
     Axpy_GPU_impl(height, width, alpha,
                   A, colStrideA, rowStrideA,
-                  B, colStrideB, rowStrideB, syncInfo.stream_);
+                  B, colStrideB, rowStrideB, syncInfo.Stream());
 }
 #endif // HYDROGEN_HAVE_CUDA
 

@@ -86,7 +86,7 @@ public:
             InterDeviceCopy<Device::GPU, Device::CPU>::MemCopy1DAsync(
                 host_data_.data()+initial_xfer_offset,
                 device_data_+initial_xfer_offset,
-                initial_xfer_size, syncInfo_.stream_);
+                initial_xfer_size, syncInfo_.Stream());
     }
 
     ~ManagedHostMemoryWrapper()
@@ -97,7 +97,7 @@ public:
             InterDeviceCopy<Device::CPU, Device::GPU>::MemCopy1DAsync(
                 device_data_+final_xfer_offset_,
                 host_data_.data()+final_xfer_offset_,
-                final_xfer_size_, syncInfo_.stream_);
+                final_xfer_size_, syncInfo_.Stream());
             Synchronize(syncInfo_);
         }
     }
@@ -153,7 +153,7 @@ auto MakeHostBuffer(T const* buf, size_t const& size,
     simple_buffer<T,Device::CPU> locbuf(
         size, SyncInfo<Device::CPU>{}, /*mode=*/ 1);
     InterDeviceCopy<Device::GPU, Device::CPU>::MemCopy1DAsync(
-        locbuf.data(), buf, size, syncInfo.stream_);
+        locbuf.data(), buf, size, syncInfo.Stream());
     return locbuf;
 }
 #endif // HYDROGEN_HAVE_CUDA

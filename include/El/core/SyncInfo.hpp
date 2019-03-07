@@ -46,13 +46,21 @@ void Synchronize(SyncInfo<D> const&)
 #ifdef HYDROGEN_HAVE_CUDA
 
 template <>
-struct SyncInfo<Device::GPU>
+class SyncInfo<Device::GPU>
 {
-    SyncInfo() : SyncInfo{GPUManager::Stream(), GPUManager::Event()} {}
+public:
+    SyncInfo() : SyncInfo{nullptr, nullptr} {}//GPUManager::Stream(), GPUManager::Event()} {}
 
     SyncInfo(cudaStream_t stream, cudaEvent_t event)
         : stream_{stream}, event_{event} {}
 
+    cudaStream_t& Stream() noexcept { return stream_; }
+    cudaEvent_t& Event() noexcept { return event_; }
+
+    cudaStream_t const& Stream() const noexcept { return stream_; }
+    cudaEvent_t const& Event() const noexcept { return event_; }
+
+private:
     cudaStream_t stream_;
     cudaEvent_t event_;
 };// struct SyncInfo<Device::GPU>
@@ -60,7 +68,7 @@ struct SyncInfo<Device::GPU>
 
 inline void AddSynchronizationPoint(SyncInfo<Device::GPU> const& syncInfo)
 {
-    EL_CHECK_CUDA(cudaEventRecord(syncInfo.event_, syncInfo.stream_));
+    EL_CHECK_CUDA(cudaEventRecord(syncInfo.Event(), syncInfo.Stream()));
 }
 
 inline void AddSynchronizationPoint(
@@ -79,10 +87,10 @@ inline void AddSynchronizationPoint(
 inline void AddSynchronizationPoint(
     SyncInfo<Device::GPU> const& A, SyncInfo<Device::GPU> const& B)
 {
-    if (A.stream_ != B.stream_)
+    if (A.Stream() != B.Stream())
     {
         AddSynchronizationPoint(A);
-        EL_CHECK_CUDA(cudaStreamWaitEvent(B.stream_, A.event_, 0));
+        EL_CHECK_CUDA(cudaStreamWaitEvent(B.Stream(), A.Event(), 0));
     }
 }
 
@@ -91,22 +99,22 @@ inline void AddSynchronizationPoint(
     SyncInfo<Device::GPU> const& A,
     SyncInfo<Device::GPU> const& B, SyncInfo<Device::GPU> const& C)
 {
-    bool const ABdiff = (A.stream_ == B.stream_);
-    bool const ACdiff = (A.stream_ == C.stream_);
+    bool const ABdiff = (A.Stream() == B.Stream());
+    bool const ACdiff = (A.Stream() == C.Stream());
 
     if (ABdiff || ACdiff)
         AddSynchronizationPoint(A);
 
     if (ABdiff)
-        EL_CHECK_CUDA(cudaStreamWaitEvent(B.stream_, A.event_, 0));
+        EL_CHECK_CUDA(cudaStreamWaitEvent(B.Stream(), A.Event(), 0));
 
     if (ACdiff)
-        EL_CHECK_CUDA(cudaStreamWaitEvent(C.stream_, A.event_, 0));
+        EL_CHECK_CUDA(cudaStreamWaitEvent(C.Stream(), A.Event(), 0));
 }
 
 inline void Synchronize(SyncInfo<Device::GPU> const& syncInfo)
 {
-    EL_CHECK_CUDA(cudaStreamSynchronize(syncInfo.stream_));
+    EL_CHECK_CUDA(cudaStreamSynchronize(syncInfo.Stream()));
 }
 
 #endif // HYDROGEN_HAVE_CUDA

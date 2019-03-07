@@ -119,7 +119,8 @@ void Axpy(S alphaS, Matrix<T,Device::GPU> const& X, Matrix<T,Device::GPU>& Y)
     T const* XBuf = X.LockedBuffer();
     T* YBuf = Y.Buffer();
 
-    SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(X), syncInfoB = SyncInfoFromMatrix(Y);
+    SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(X),
+        syncInfoB = SyncInfoFromMatrix(Y);
     auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
 
     // Keep the old stream so we can restore it. I don't know if this
@@ -129,7 +130,7 @@ void Axpy(S alphaS, Matrix<T,Device::GPU> const& X, Matrix<T,Device::GPU>& Y)
     EL_CHECK_CUBLAS(
         cublasGetStream(GPUManager::cuBLASHandle(), &old_stream));
     EL_CHECK_CUBLAS(
-        cublasSetStream(GPUManager::cuBLASHandle(), syncInfoB.stream_));
+        cublasSetStream(GPUManager::cuBLASHandle(), syncInfoB.Stream()));
 
     // If X and Y are vectors, we can allow one to be a column and the other
     // to be a row. Otherwise we force X and Y to be the same dimension.

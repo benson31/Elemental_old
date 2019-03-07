@@ -71,7 +71,7 @@ Matrix<Ring, Device::CPU>::Matrix(Matrix<Ring, Device::GPU> const& A)
     : Matrix{A.Height(), A.Width(), A.LDim()}
 {
     EL_DEBUG_CSE;
-    auto stream = GPUManager::Stream();
+    auto stream = A.Stream();
     EL_CHECK_CUDA(cudaMemcpy2DAsync(data_, this->LDim()*sizeof(Ring),
                                     A.LockedBuffer(), A.LDim()*sizeof(Ring),
                                     A.Height()*sizeof(Ring), A.Width(),

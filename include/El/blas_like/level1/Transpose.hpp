@@ -10,6 +10,7 @@
 #define EL_BLAS_TRANSPOSE_HPP
 
 #include <El/core/Profiling.hpp>
+#include <El/core/environment/decl.hpp>
 
 namespace El {
 
@@ -209,6 +210,7 @@ void Transpose
   bool conjugate )
 {
     EL_DEBUG_CSE
+
     AUTO_NOSYNC_PROFILE_REGION("Transpose.ElementalMatrix");
     const auto AData = A.DistData();
     const auto BData = B.DistData();
@@ -261,7 +263,7 @@ void Transpose
         Copy( A, *C );
         B.Resize( A.Width(), A.Height() );
         Transpose(C->LockedMatrix(), B.Matrix(), conjugate);
-    }
+   }
 }
 
 template<typename T>

@@ -50,7 +50,8 @@ void TransposeDist(DistMatrix<T,U,V,ELEMENT,Device::CPU> const& A,
         const Int recvRankB =
             (recvRankA/colStrideA)+rowStrideA*(recvRankA%colStrideA);
 
-        simple_buffer<T,Device::CPU> buffer((colStrideA+rowStrideA)*portionSize);
+        simple_buffer<T,Device::CPU> buffer((colStrideA+rowStrideA)*portionSize,
+                                            SyncInfo<Device::CPU>{});
         T* sendBuf = buffer.data();
         T* recvBuf = buffer.data() + colStrideA*portionSize;
 
@@ -124,7 +125,8 @@ void TransposeDist(DistMatrix<T,U,V,ELEMENT,Device::CPU> const& A,
         const Int recvRankA =
             (recvRankB/rowStrideA)+colStrideA*(recvRankB%rowStrideA);
 
-        simple_buffer<T,Device::CPU> buffer((colStrideA+rowStrideA)*portionSize);
+        simple_buffer<T,Device::CPU> buffer((colStrideA+rowStrideA)*portionSize,
+                                            SyncInfo<Device::CPU>{});
         T* sendBuf = buffer.data();
         T* recvBuf = buffer.data() + rowStrideA*portionSize;
 

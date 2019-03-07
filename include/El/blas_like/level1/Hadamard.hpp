@@ -80,10 +80,22 @@ void Hadamard(AbstractMatrix<T> const& A, AbstractMatrix<T> const& B,
         break;
 #ifdef HYDROGEN_HAVE_CUDA
     case Device::GPU:
+    {
+        auto&& a_sync_info = SyncInfoFromMatrix(
+            static_cast<Matrix<T,Device::GPU> const&>(A));
+        auto&& b_sync_info = SyncInfoFromMatrix(
+            static_cast<Matrix<T,Device::GPU> const&>(B));
+        auto&& c_sync_info = SyncInfoFromMatrix(
+            static_cast<Matrix<T,Device::GPU>&>(C));
+
+        auto sync_manager = MakeMultiSync(
+            c_sync_info, a_sync_info, b_sync_info);
+
         Hadamard_GPU_impl( height, width,
                            ABuf, 1, ALDim, BBuf, 1, BLDim,
-                           CBuf, 1, CLDim );
+                           CBuf, 1, CLDim, c_sync_info.Stream() );
         break;
+    }
 #endif // HYDROGEN_HAVE_CUDA
     default:
         LogicError("Bad device type for Hadamard.");

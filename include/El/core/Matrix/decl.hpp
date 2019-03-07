@@ -392,10 +392,10 @@ template <typename T>
 void SetSyncInfo(
     Matrix<T,Device::GPU>& mat, SyncInfo<Device::GPU> const& syncInfo)
 {
-    if (syncInfo.stream_ != nullptr)
-        mat.SetStream(syncInfo.stream_);
-    if (syncInfo.event_ != nullptr)
-        mat.SetEvent(syncInfo.event_);
+    if (syncInfo.Stream() != nullptr)
+        mat.SetStream(syncInfo.Stream());
+    if (syncInfo.Event() != nullptr)
+        mat.SetEvent(syncInfo.Event());
 }
 #endif // HYDROGEN_HAVE_CUDA
 

@@ -58,6 +58,7 @@ void FinalizeCUDA()
     cub::DestroyMemoryPool();
 #endif // HYDROGEN_HAVE_CUB
     GPUManager::Destroy();
+    EL_FORCE_CHECK_CUDA(cudaDeviceReset());
 }
 
 GPUManager::GPUManager(int device)

@@ -94,7 +94,7 @@ G* New( size_t size, unsigned int mode, SyncInfo<Device::GPU> const& syncInfo_ )
         status = cub::MemoryPool().DeviceAllocate(
             reinterpret_cast<void**>(&ptr),
             size * sizeof(G),
-            syncInfo_.stream_);
+            syncInfo_.Stream());
         break;
 #endif // HYDROGEN_HAVE_CUB
     default: RuntimeError("Invalid GPU memory allocation mode");
@@ -138,7 +138,7 @@ void MemZero( G* buffer, size_t numEntries, unsigned int mode,
 {
     EL_CHECK_CUDA(
         cudaMemsetAsync(buffer, 0x0, numEntries * sizeof(G),
-                        syncInfo_.stream_));
+                        syncInfo_.Stream()));
 }
 
 #endif // HYDROGEN_HAVE_CUDA

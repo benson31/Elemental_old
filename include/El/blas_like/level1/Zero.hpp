@@ -103,7 +103,8 @@ void Zero( AbstractMatrix<T>& A )
         break;
 #ifdef HYDROGEN_HAVE_CUDA
     case Device::GPU:
-        Fill_GPU_impl(height, width, T(0), ABuf, ALDim);
+        Fill_GPU_impl(height, width, T(0), ABuf, ALDim,
+                      static_cast<Matrix<T,Device::GPU>&>(A).Stream());
         break;
 #endif // HYDROGEN_HAVE_CUDA
     default:

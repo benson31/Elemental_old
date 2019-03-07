@@ -40,23 +40,23 @@ inline cublasOperation_t CharTocuBLASOp(char c)
 //
 // BLAS 1
 //
-#define ADD_AXPY_IMPL(ScalarType, TypeChar)           \
-    void Axpy(int n, ScalarType const& alpha,         \
-              ScalarType const* X, int incx,          \
-              ScalarType* Y, int incy)                \
-    {                                                 \
-        EL_CHECK_CUBLAS(cublas ## TypeChar ## axpy(   \
-            GPUManager::cuBLASHandle(),               \
-            n, &alpha, X, incx, Y, incy));            \
+#define ADD_AXPY_IMPL(ScalarType, TypeChar)                     \
+    void Axpy(int n, ScalarType const& alpha,                   \
+              ScalarType const* X, int incx,                    \
+              ScalarType* Y, int incy)                          \
+    {                                                           \
+        EL_CHECK_CUBLAS(cublas ## TypeChar ## axpy(             \
+                            GPUManager::cuBLASHandle(),         \
+                            n, &alpha, X, incx, Y, incy));      \
     }
 
-#define ADD_COPY_IMPL(ScalarType, TypeChar)           \
-    void Copy(int n, ScalarType const* X, int incx,   \
-              ScalarType* Y, int incy)                \
-    {                                                 \
-        EL_CHECK_CUBLAS(cublas ## TypeChar ## copy(   \
-            GPUManager::cuBLASHandle(),               \
-            n, X, incx, Y, incy));                    \
+#define ADD_COPY_IMPL(ScalarType, TypeChar)             \
+    void Copy(int n, ScalarType const* X, int incx,     \
+              ScalarType* Y, int incy)                  \
+    {                                                   \
+        EL_CHECK_CUBLAS(cublas ## TypeChar ## copy(     \
+                            GPUManager::cuBLASHandle(), \
+                            n, X, incx, Y, incy));      \
     }
 
 //
@@ -108,7 +108,7 @@ inline cublasOperation_t CharTocuBLASOp(char c)
         ScalarType const* B, int BLDim,                                 \
         ScalarType* C, int CLDim )                                      \
     {                                                                   \
-       EL_CHECK_CUBLAS(cublas ## TypeChar ## geam(                      \
+        EL_CHECK_CUBLAS(cublas ## TypeChar ## geam(                     \
             GPUManager::cuBLASHandle(),                                 \
             CharTocuBLASOp(transA), CharTocuBLASOp(transB),             \
             m, n, &alpha, A, ALDim, &beta, B, BLDim, C, CLDim));        \

@@ -8,7 +8,7 @@ template <typename T, typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
 void Axpy_GPU_impl(
     size_t, size_t, T const&,
     T const*, size_t, size_t, T*, size_t, size_t,
-    cudaStream_t = GPUManager::Stream());
+    cudaStream_t);
 
 template <typename T,
           typename=DisableIf<IsDeviceValidType<T,Device::GPU>>,
@@ -16,7 +16,7 @@ template <typename T,
 void Axpy_GPU_impl(
     size_t, size_t, T const&,
     T const*, size_t, size_t, T*, size_t, size_t,
-    cudaStream_t = GPUManager::Stream())
+    cudaStream_t)
 {
     LogicError("Axpy: Type not valid on GPU.");
 }

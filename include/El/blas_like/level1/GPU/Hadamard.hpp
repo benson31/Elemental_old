@@ -10,7 +10,7 @@ void Hadamard_GPU_impl(
     T const*, size_t, size_t,
     T const*, size_t, size_t,
     T*, size_t, size_t,
-    cudaStream_t = GPUManager::Stream());
+    cudaStream_t);
 
 template <typename T,
           typename=DisableIf<IsDeviceValidType<T,Device::GPU>>,
@@ -20,7 +20,7 @@ void Hadamard_GPU_impl(
     T const*, size_t, size_t,
     T const*, size_t, size_t,
     T*, size_t, size_t,
-    cudaStream_t = GPUManager::Stream())
+    cudaStream_t)
 {
     LogicError("Hadamard: Type not valid on GPU.");
 }
