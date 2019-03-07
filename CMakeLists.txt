@@ -53,7 +53,7 @@ endif (__GIT_EXECUTABLE)
 
 # This must be set because version tags
 set(HYDROGEN_VERSION_MAJOR 1)
-set(HYDROGEN_VERSION_MINOR 1)
+set(HYDROGEN_VERSION_MINOR 2)
 set(HYDROGEN_VERSION_PATCH 0)
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
@@ -367,11 +367,18 @@ if (Hydrogen_ENABLE_CUDA)
 endif (Hydrogen_ENABLE_CUDA)
 
 if (Hydrogen_ENABLE_ALUMINUM)
-  find_package(Aluminum)
+  find_package(Aluminum 0.2.0 NO_MODULE QUIET
+    HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
+    $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
+    PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
+    NO_DEFAULT_PATH)
+  if (NOT Aluminum_FOUND)
+    find_package(Aluminum 0.2.0 NO_MODULE QUIET)
+  endif ()
 
   if (Aluminum_FOUND)
     set(HYDROGEN_HAVE_ALUMINUM TRUE)
-    message(STATUS "Aluminum support enabled.")
+    message(STATUS "Found Aluminum: ${Aluminum_DIR}")
 
     if (HYDROGEN_HAVE_CUDA AND AL_HAS_NCCL)
       set(HYDROGEN_HAVE_NCCL2 TRUE)

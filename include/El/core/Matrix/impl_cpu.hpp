@@ -635,6 +635,7 @@ int Matrix<Ring, Device::CPU>::RowAlign() const EL_NO_EXCEPT { return 0; }
 #ifdef HYDROGEN_HAVE_HALF
 PROTO(cpu_half_type)
 #endif
+PROTO(uint8_t)
 
 #include <El/macros/Instantiate.h>
 

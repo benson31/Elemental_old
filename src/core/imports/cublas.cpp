@@ -114,6 +114,20 @@ inline cublasOperation_t CharTocuBLASOp(char c)
             m, n, &alpha, A, ALDim, &beta, B, BLDim, C, CLDim));        \
     }
 
+#define ADD_DGMM_IMPL(ScalarType, TypeChar)                             \
+    void Dgmm(                                                          \
+        LeftOrRight side,                                               \
+        int m, int n,                                                   \
+        ScalarType const* A, int ALDim,                                 \
+        ScalarType const* X, int IncX,                                  \
+        ScalarType* C, int CLDim )                                      \
+    {                                                                   \
+        EL_CHECK_CUBLAS(cublas ## TypeChar ## dgmm(                     \
+            GPUManager::cuBLASHandle(),                                 \
+            (side == LEFT ? CUBLAS_SIDE_LEFT : CUBLAS_SIDE_RIGHT),      \
+            m, n, A, ALDim, X, IncX, C, CLDim));                        \
+    }
+
 // BLAS 1
 ADD_AXPY_IMPL(float, S)
 ADD_AXPY_IMPL(double, D)
@@ -132,6 +146,9 @@ ADD_GEMM_IMPL(double, D)
 // BLAS-like extension
 ADD_GEAM_IMPL(float, S)
 ADD_GEAM_IMPL(double, D)
+
+ADD_DGMM_IMPL(float, S)
+ADD_DGMM_IMPL(double, D)
 
 } // namespace cublas
 

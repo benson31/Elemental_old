@@ -193,7 +193,7 @@ struct ProfileRegion
 
     // Allow move -- allows the Make function to work
     ProfileRegion(ProfileRegion&&) noexcept = default;
-    ProfileRegion& operator=(ProfileRegion&&) noexcept = default;
+    ProfileRegion& operator=(ProfileRegion&&) = default;
 
     std::string desc_;
 };// struct ProfileRegion

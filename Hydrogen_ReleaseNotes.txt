@@ -1,4 +1,11 @@
-Notes for V1.0.1:
+Notes for v1.1.0:
+
+- Miscellaneous bug fixes.
+- Add profiling interface for VTune and NVProf.
+- Add half-precision support for the the CPU. GPU support is still
+  work in progress.
+
+Notes for v1.0.1:
 
 - Significant tidying of build system
 

@@ -584,6 +584,10 @@ EL_EXTERN template void Copy(
 EL_EXTERN template void Copy(
     const Matrix<cpu_half_type>& A, Matrix<cpu_half_type>& B );
 #endif // HYDROGEN_HAVE_HALF
+EL_EXTERN template void Copy(
+    const AbstractMatrix<uint8_t>& A, AbstractMatrix<uint8_t>& B );
+EL_EXTERN template void Copy(
+    const Matrix<uint8_t>& A, Matrix<uint8_t>& B );
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

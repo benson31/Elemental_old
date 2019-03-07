@@ -307,8 +307,10 @@ template <typename T, Collective C, Device D,
           typename=EnableIf<IsAluminumSupported<T,D,C>>>
 inline void EnsureComm(Comm const& comm, SyncInfo<D> const& syncInfo)
 {
+#ifdef HYDROGEN_HAVE_ALUMINUM
     using Backend = BestBackend<T,D,C>;
     comm.template GetComm<Backend>(syncInfo);
+#endif // HYDROGEN_HAVE_ALUMINUM
 }
 
 template <typename T, Collective C, Device D,
