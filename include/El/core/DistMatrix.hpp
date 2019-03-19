@@ -20,23 +20,23 @@ inline void AssertSameDist( const DistTypeA& distA, const DistTypeB& distB )
 
 } // namespace El
 
-#include <El/core/DistMatrix/Abstract.hpp>
+#include <El/core/DistMatrix/AbstractDistMatrix.hpp>
 
-#include <El/core/DistMatrix/Element.hpp>
-#include <El/core/DistMatrix/Element/CIRC_CIRC.hpp>
-#include <El/core/DistMatrix/Element/MC_MR.hpp>
-#include <El/core/DistMatrix/Element/MC_STAR.hpp>
-#include <El/core/DistMatrix/Element/MD_STAR.hpp>
-#include <El/core/DistMatrix/Element/MR_MC.hpp>
-#include <El/core/DistMatrix/Element/MR_STAR.hpp>
-#include <El/core/DistMatrix/Element/STAR_MC.hpp>
-#include <El/core/DistMatrix/Element/STAR_MD.hpp>
-#include <El/core/DistMatrix/Element/STAR_MR.hpp>
-#include <El/core/DistMatrix/Element/STAR_STAR.hpp>
-#include <El/core/DistMatrix/Element/STAR_VC.hpp>
-#include <El/core/DistMatrix/Element/STAR_VR.hpp>
-#include <El/core/DistMatrix/Element/VC_STAR.hpp>
-#include <El/core/DistMatrix/Element/VR_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix.hpp>
+#include <El/core/DistMatrix/ElementMatrix/CIRC_CIRC.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MC_MR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MC_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MD_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MR_MC.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MR_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_MC.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_MD.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_MR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_VC.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_VR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/VC_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/VR_STAR.hpp>
 
 #include <El/core/DistMatrix/Block.hpp>
 #include <El/core/DistMatrix/Block/CIRC_CIRC.hpp>

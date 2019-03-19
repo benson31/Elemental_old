@@ -9,6 +9,9 @@
 #include <El.hpp>
 using namespace El;
 
+/*!
+  @brief Called by TestAxpy for checking.
+*/
 template<typename T,Device D>
 void TestCorrectness
 (T alpha, const DistMatrix<T,MC,MR,ELEMENT,D>& XPre,
@@ -56,7 +59,7 @@ void TestCorrectness
     {
         const Base<T> EFrobNorm = FrobeniusNorm(E);
         if(print)
-            Print(E, "E");
+            Print(E, "E (error)");
         Output
             ("|| E ||_F / || Y ||_F = ",
              EFrobNorm, "/", YFrobNorm, "=", EFrobNorm/YFrobNorm);
@@ -64,6 +67,9 @@ void TestCorrectness
 }
 
 
+/*!
+  @brief Exercise Ax+y and check for correctness.
+*/
 template<typename T,Device D=Device::CPU>
 void TestAxpy
 (Int m,

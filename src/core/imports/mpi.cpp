@@ -1831,7 +1831,8 @@ std::vector<T> AllToAll(
     Comm const& comm )
 EL_NO_RELEASE_EXCEPT
 {
-    LogicError("AllToAll: Is this used? Tell Tom if so.");
+    // LogicError("AllToAll: Is this used? Tell Tom if so.");
+    /* Tom: this is used when the Dot test is run with 2 processes.  Debian OS with mpich. --BTNG */
 
     SyncInfo<Device::CPU> syncInfo;
     const int commSize = Size( comm );

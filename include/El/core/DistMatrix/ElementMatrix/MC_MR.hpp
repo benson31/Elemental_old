@@ -293,6 +293,7 @@ private:
 
     void do_empty_data_() override;
 
+    // Make friend of *all* DistMatrix classes
     template<typename S,Dist U,Dist V,DistWrap wrap,Device D>
     friend class DistMatrix;
 
