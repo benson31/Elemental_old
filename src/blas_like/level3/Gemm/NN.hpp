@@ -296,14 +296,14 @@ void ensureSyncPoolInit()
     {
         for (auto&& si : syncPool)
         {
-            if (!si.stream_)
+            if (!si.Stream())
             {
                 cudaStreamCreateWithPriority(
-                    &si.stream_, cudaStreamNonBlocking, 100);
+                    &si.Stream(), cudaStreamNonBlocking, 100);
             }
-            if (!si.event_)
+            if (!si.Event())
             {
-                cudaEventCreateWithFlags(&si.event_, cudaEventDisableTiming);
+                cudaEventCreateWithFlags(&si.Event(), cudaEventDisableTiming);
             }
         }
         syncPool_initialized = true;
@@ -519,7 +519,7 @@ void SUMMA_NNC_impl_gpu_multistream_two(T alpha,
                     GPUManager::Event()});
         for (size_t sid = 0; sid < numstreams; ++sid)
         {
-            cudaStreamWaitEvent(syncPool[sid].stream_, GPUManager::Event(), 0);
+            cudaStreamWaitEvent(syncPool[sid].Stream(), GPUManager::Event(), 0);
         }
 
         // Launch N computations
@@ -540,7 +540,7 @@ void SUMMA_NNC_impl_gpu_multistream_two(T alpha,
         for (size_t sid = 0; sid < numstreams; ++sid)
         {
             AddSynchronizationPoint(syncPool[sid]);
-            cudaStreamWaitEvent(GPUManager::Stream(), syncPool[sid].event_, 0);
+            cudaStreamWaitEvent(GPUManager::Stream(), syncPool[sid].Event(), 0);
         }
 
         k = k_start;
