@@ -83,6 +83,16 @@ void Scale( S alphaS, AbstractMatrix<T>& A )
             break;
 #ifdef HYDROGEN_HAVE_CUDA
         case Device::GPU:
+        {
+            auto const& A_dev = static_cast<Matrix<T,Device::GPU> const&>(A);
+            auto A_sync = SyncInfoFromMatrix(A_dev);
+
+            cudaStream_t old_stream;
+            EL_CHECK_CUBLAS(
+                cublasGetStream(GPUManager::cuBLASHandle(), &old_stream));
+            EL_CHECK_CUBLAS(
+                cublasSetStream(GPUManager::cuBLASHandle(), A_sync.Stream()));
+
             gpu_details::Scale(alpha, ABuf, height, width, ALDim);
 
             // Restore the "default" stream
