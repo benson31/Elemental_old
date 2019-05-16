@@ -171,7 +171,7 @@ Memory<G,D>& Memory<G,D>::operator=(Memory<G,D>&& mem)
 { ShallowSwap(mem); return *this; }
 
 template<typename G, Device D>
-void Memory<G,D>::ShallowSwap(Memory<G,D>& mem)
+void Memory<G,D>::ShallowSwap(Memory<G,D>& mem) EL_NO_EXCEPT
 {
     std::swap(size_, mem.size_);
     std::swap(rawBuffer_, mem.rawBuffer_);

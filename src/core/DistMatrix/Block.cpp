@@ -210,8 +210,10 @@ void BlockMatrix<T>::Resize( Int height, Int width )
     this->height_ = height;
     this->width_ = width;
     if( this->Participating() )
-        this->Matrix().Resize_
-        ( this->NewLocalHeight(height), this->NewLocalWidth(width) );
+        this->Matrix().Resize_(
+            this->NewLocalHeight(height),
+            this->NewLocalWidth(width),
+            this->NewLocalHeight(height));
 }
 
 template<typename T>
@@ -479,29 +481,8 @@ void BlockMatrix<T>::Attach
   int colAlign, int rowAlign, Int colCut, Int rowCut,
   T* buffer, Int ldim, int root )
 {
-    EL_DEBUG_CSE
-    this->Empty();
-
-    this->grid_ = &g;
-    this->root_ = root;
-    this->height_ = height;
-    this->width_ = width;
-    this->blockHeight_ = blockHeight;
-    this->blockWidth_ = blockWidth;
-    this->colAlign_ = colAlign;
-    this->rowAlign_ = rowAlign;
-    this->colCut_ = colCut;
-    this->rowCut_ = rowCut;
-    this->colConstrained_ = true;
-    this->rowConstrained_ = true;
-    this->viewType_ = VIEW;
-    this->SetShifts();
-    if( this->Participating() )
-    {
-        Int localHeight = this->NewLocalHeight(height);
-        Int localWidth  = this->NewLocalWidth(width);
-        this->Matrix().Attach_( localHeight, localWidth, buffer, ldim );
-    }
+    EL_DEBUG_CSE;
+    LogicError("This function is going away. Do not use.");
 }
 
 template<typename T>
@@ -512,9 +493,9 @@ void BlockMatrix<T>::Attach
   int root )
 {
     // TODO(poulson): Assert that the local dimensions are correct
-    this->Attach
-    ( height, width, grid, blockHeight, blockWidth,
-      colAlign, rowAlign, colCut, rowCut, A.Buffer(), A.LDim(), root );
+    this->Attach(
+        height, width, grid, blockHeight, blockWidth,
+        colAlign, rowAlign, colCut, rowCut, A.Buffer(), A.LDim(), root);
 }
 
 template<typename T>
@@ -524,29 +505,8 @@ void BlockMatrix<T>::LockedAttach
   int colAlign, int rowAlign, Int colCut, Int rowCut,
   const T* buffer, Int ldim, int root )
 {
-    EL_DEBUG_CSE
-    this->Empty();
-
-    this->grid_ = &grid;
-    this->root_ = root;
-    this->height_ = height;
-    this->width_ = width;
-    this->blockHeight_ = blockHeight;
-    this->blockWidth_ = blockWidth;
-    this->colAlign_ = colAlign;
-    this->rowAlign_ = rowAlign;
-    this->colCut_ = colCut;
-    this->rowCut_ = rowCut;
-    this->colConstrained_ = true;
-    this->rowConstrained_ = true;
-    this->viewType_ = LOCKED_VIEW;
-    this->SetShifts();
-    if( this->Participating() )
-    {
-        Int localHeight = this->NewLocalHeight(height);
-        Int localWidth  = this->NewLocalWidth(width);
-        this->Matrix().LockedAttach_( localHeight, localWidth, buffer, ldim );
-    }
+    EL_DEBUG_CSE;
+    LogicError("This function is going away. Do not use.");
 }
 
 template<typename T>
@@ -557,9 +517,9 @@ void BlockMatrix<T>::LockedAttach
   int root )
 {
     // TODO(poulson): Assert that the local dimensions are correct
-    this->LockedAttach
-    ( height, width, grid, blockHeight, blockWidth,
-      colAlign, rowAlign, colCut, rowCut, A.LockedBuffer(), A.LDim(), root );
+    this->LockedAttach(
+        height, width, grid, blockHeight, blockWidth,
+        colAlign, rowAlign, colCut, rowCut, A.LockedBuffer(), A.LDim(), root);
 }
 
 // Basic queries

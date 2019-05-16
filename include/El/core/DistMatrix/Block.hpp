@@ -91,21 +91,25 @@ public:
     // Buffer attachment
     // -----------------
     // (Immutable) view of a distributed matrix's buffer
+    H_DEPRECATED("These functions are unsafe. They will be removed soon.")
     void Attach
     (Int height, Int width, const El::Grid& g,
       Int blockHeight, Int blockWidth,
       int colAlign, int rowAlign, Int colCut, Int rowCut,
       Ring* buffer, Int ldim, int root=0);
+    H_DEPRECATED("These functions are unsafe. They will be removed soon.")
     void LockedAttach
     (Int height, Int width, const El::Grid& g,
       Int blockHeight, Int blockWidth,
       int colAlign, int rowAlign, Int colCut, Int rowCut,
       const Ring* buffer, Int ldim, int root=0);
+    H_DEPRECATED("These functions are unsafe. They will be removed soon.")
     void Attach
     (Int height, Int width, const El::Grid& g,
       Int blockHeight, Int blockWidth,
       int colAlign, int rowAlign, Int colCut, Int rowCut,
       El::Matrix<Ring>& A, int root=0);
+    H_DEPRECATED("These functions are unsafe. They will be removed soon.")
     void LockedAttach
     (Int height, Int width, const El::Grid& g,
       Int blockHeight, Int blockWidth,

@@ -18,118 +18,98 @@ namespace El
 // Constructors and destructors
 // ============================
 
-template<typename Ring>
-Matrix<Ring, Device::CPU>::Matrix() { }
+template <typename T>
+Matrix<T, Device::CPU>::Matrix() { }
 
-template<typename Ring>
-Matrix<Ring, Device::CPU>::Matrix(Int height, Int width)
-    : AbstractMatrix<Ring>{height,width,height}
-{
-    memory_.Require(this->LDim()*this->Width());
-    data_ = memory_.Buffer();
-    // TODO(poulson): Consider explicitly zeroing
-}
-
-template<typename Ring>
-Matrix<Ring, Device::CPU>::Matrix(Int height, Int width, Int leadingDimension)
-    : AbstractMatrix<Ring>{height,width,leadingDimension}
+template <typename T>
+Matrix<T, Device::CPU>::Matrix(
+    size_type height, size_type width, size_type leadingDimension)
+    : AbstractMatrix<T>{height, width, leadingDimension}
 {
     memory_.Require(this->LDim()*this->Width());
     data_ = memory_.Buffer();
 }
 
-template<typename Ring>
-Matrix<Ring, Device::CPU>::Matrix
-(Int height, Int width, const Ring* buffer, Int leadingDimension)
-    : AbstractMatrix<Ring>{LOCKED_VIEW,height,width,leadingDimension},
-    data_(const_cast<Ring*>(buffer))
+template <typename T>
+Matrix<T, Device::CPU>::Matrix(
+    size_type height, size_type width, value_type const* buffer,
+    size_type leadingDimension)
+    : AbstractMatrix<T>{LOCKED_VIEW, height, width, leadingDimension},
+      data_(const_cast<T*>(buffer))
 {
 }
 
-template<typename Ring>
-Matrix<Ring, Device::CPU>::Matrix
-(Int height, Int width, Ring* buffer, Int leadingDimension)
-    : AbstractMatrix<Ring>{VIEW,height,width,leadingDimension},
-    data_(buffer)
+template <typename T>
+Matrix<T, Device::CPU>::Matrix(
+    size_type height, size_type width, value_type* buffer,
+    size_type leadingDimension)
+    : AbstractMatrix<T>{VIEW,height,width,leadingDimension},
+      data_(buffer)
 {
 }
 
-template<typename Ring>
-Matrix<Ring, Device::CPU>::Matrix(Matrix<Ring, Device::CPU> const& A)
-  : AbstractMatrix<Ring>(A)
+template <typename T>
+Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::CPU> const& A)
 {
-    EL_DEBUG_CSE
-    if (&A != this)
-        *this = A;
-    else
-        LogicError("You just tried to construct a Matrix with itself!");
+    EL_DEBUG_CSE;
+    Copy(A, *this);
 }
 
 #ifdef HYDROGEN_HAVE_CUDA
-template<typename Ring>
-Matrix<Ring, Device::CPU>::Matrix(Matrix<Ring, Device::GPU> const& A)
+template <typename T>
+Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::GPU> const& A)
     : Matrix{A.Height(), A.Width(), A.LDim()}
 {
     EL_DEBUG_CSE;
     auto stream = A.Stream();
-    EL_CHECK_CUDA(cudaMemcpy2DAsync(data_, this->LDim()*sizeof(Ring),
-                                    A.LockedBuffer(), A.LDim()*sizeof(Ring),
-                                    A.Height()*sizeof(Ring), A.Width(),
+    EL_CHECK_CUDA(cudaMemcpy2DAsync(data_, this->LDim()*sizeof(T),
+                                    A.LockedBuffer(), A.LDim()*sizeof(T),
+                                    A.Height()*sizeof(T), A.Width(),
                                     cudaMemcpyDeviceToHost,
                                     stream));
     EL_CHECK_CUDA(cudaStreamSynchronize(stream));
 }
 #endif
 
-template<typename Ring>
-Matrix<Ring, Device::CPU>::Matrix(Matrix<Ring, Device::CPU>&& A) EL_NO_EXCEPT
-  : AbstractMatrix<Ring>(A),
-      memory_(std::move(A.memory_)), data_(nullptr)
+template <typename T>
+Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::CPU>&& A) EL_NO_EXCEPT
+    : AbstractMatrix<T>{std::move(A)},
+    memory_{std::move(A.memory_)}, data_{A.data_}
 {
-    std::swap(data_, A.data_);
+    A.data_ = nullptr;
 }
 
-template<typename Ring>
-Matrix<Ring, Device::CPU>::~Matrix() { }
+template <typename T>
+Matrix<T, Device::CPU>::~Matrix() { }
 
 // Assignment and reconfiguration
 // ==============================
 
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::Attach
-(Int height, Int width, Ring* buffer, Int leadingDimension)
+template <typename T>
+void Matrix<T, Device::CPU>::Attach(
+    size_type height, size_type width, value_type* buffer,
+    size_type leadingDimension)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if (this->FixedSize())
-          LogicError("Cannot attach a new buffer to a view with fixed size");
-   )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if (this->FixedSize())
+        LogicError("Cannot attach a new buffer to a view with fixed size");
+#endif
     Attach_(height, width, buffer, leadingDimension);
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::LockedAttach
-(Int height, Int width, const Ring* buffer, Int leadingDimension)
+template <typename T>
+void Matrix<T, Device::CPU>::LockedAttach(
+    size_type height, size_type width, value_type const* buffer,
+    size_type leadingDimension)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if (this->FixedSize())
-          LogicError("Cannot attach a new buffer to a view with fixed size");
-   )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if (this->FixedSize())
+        LogicError("Cannot attach a new buffer to a view with fixed size");
+#endif
     LockedAttach_(height, width, buffer, leadingDimension);
-}
-
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::Control
-(Int height, Int width, Ring* buffer, Int leadingDimension)
-{
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if (this->FixedSize())
-          LogicError("Cannot attach a new buffer to a view with fixed size");
-   )
-    Control_(height, width, buffer, leadingDimension);
 }
 
 // Operator overloading
@@ -137,120 +117,115 @@ void Matrix<Ring, Device::CPU>::Control
 
 // Return a view
 // -------------
-template<typename Ring>
-Matrix<Ring, Device::CPU>
-Matrix<Ring, Device::CPU>::operator()(Range<Int> I, Range<Int> J)
+template <typename T>
+Matrix<T, Device::CPU>
+Matrix<T, Device::CPU>::operator()(Range<Int> I, Range<Int> J)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     if (this->Locked())
         return LockedView(*this, I, J);
     else
         return View(*this, I, J);
 }
 
-template<typename Ring>
-const Matrix<Ring, Device::CPU>
-Matrix<Ring, Device::CPU>::operator()(Range<Int> I, Range<Int> J) const
+template <typename T>
+const Matrix<T, Device::CPU>
+Matrix<T, Device::CPU>::operator()(Range<Int> I, Range<Int> J) const
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     return LockedView(*this, I, J);
 }
 
 // Return a (potentially non-contiguous) subset of indices
 // -------------------------------------------------------
-template<typename Ring>
-Matrix<Ring, Device::CPU> Matrix<Ring, Device::CPU>::operator()
+template <typename T>
+Matrix<T, Device::CPU> Matrix<T, Device::CPU>::operator()
 (Range<Int> I, vector<Int> const& J) const
 {
-    EL_DEBUG_CSE
-    Matrix<Ring, Device::CPU> ASub;
+    EL_DEBUG_CSE;
+    Matrix<T, Device::CPU> ASub;
     GetSubmatrix(*this, I, J, ASub);
     return ASub;
 }
 
-template<typename Ring>
-Matrix<Ring, Device::CPU> Matrix<Ring, Device::CPU>::operator()
+template <typename T>
+Matrix<T, Device::CPU> Matrix<T, Device::CPU>::operator()
 (vector<Int> const& I, Range<Int> J) const
 {
-    EL_DEBUG_CSE
-    Matrix<Ring, Device::CPU> ASub;
+    EL_DEBUG_CSE;
+    Matrix<T, Device::CPU> ASub;
     GetSubmatrix(*this, I, J, ASub);
     return ASub;
 }
 
-template<typename Ring>
-Matrix<Ring, Device::CPU> Matrix<Ring, Device::CPU>::operator()
+template <typename T>
+Matrix<T, Device::CPU> Matrix<T, Device::CPU>::operator()
 (vector<Int> const& I, vector<Int> const& J) const
 {
-    EL_DEBUG_CSE
-    Matrix<Ring, Device::CPU> ASub;
+    EL_DEBUG_CSE;
+    Matrix<T, Device::CPU> ASub;
     GetSubmatrix(*this, I, J, ASub);
     return ASub;
 }
 
 // Make a copy
 // -----------
-template<typename Ring>
-Matrix<Ring, Device::CPU>&
-Matrix<Ring, Device::CPU>::operator=(Matrix<Ring, Device::CPU> const& A)
+template <typename T>
+Matrix<T, Device::CPU>&
+Matrix<T, Device::CPU>::operator=(Matrix<T, Device::CPU> const& A)
 {
-    EL_DEBUG_CSE
-    Copy(A, *this);
+    EL_DEBUG_CSE;
+    Matrix<T, Device::CPU>{A}.Swap(*this);
     return *this;
 }
 
 // Move assignment
 // ---------------
-template<typename Ring>
-Matrix<Ring, Device::CPU>&
-Matrix<Ring, Device::CPU>::operator=(Matrix<Ring, Device::CPU>&& A)
+template <typename T>
+Matrix<T, Device::CPU>&
+Matrix<T, Device::CPU>::operator=(Matrix<T, Device::CPU>&& A)
 {
-    EL_DEBUG_CSE
-    if (this->Viewing() || A.Viewing())
-    {
-        operator=(static_cast<Matrix<Ring, Device::CPU> const&>(A));
-    }
-    else
-    {
-        AbstractMatrix<Ring>::operator=(A);
-        memory_.ShallowSwap(A.memory_);
-        std::swap(data_, A.data_);
-    }
+    EL_DEBUG_CSE;
+    // "Move-and-swap"
+    Matrix<T, Device::CPU>{std::move(A)}.Swap(*this);
     return *this;
 }
 
 // Basic queries
 // =============
 
-template<typename Ring>
-Int Matrix<Ring, Device::CPU>::do_get_memory_size_() const EL_NO_EXCEPT
-{ return memory_.Size(); }
-
-template <typename Ring>
-Device Matrix<Ring, Device::CPU>::do_get_device_() const EL_NO_EXCEPT
+template <typename T>
+auto Matrix<T, Device::CPU>::MemorySize() const EL_NO_EXCEPT
+    -> size_type
 {
-    return Device::CPU;
+    return memory_.Size();
 }
 
-template<typename Ring>
-Ring* Matrix<Ring, Device::CPU>::Buffer() EL_NO_RELEASE_EXCEPT
+template <typename T>
+Device Matrix<T, Device::CPU>::GetDevice() const EL_NO_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if (this->Locked())
-          LogicError("Cannot return non-const buffer of locked Matrix");
-   )
+    return this->MyDevice();
+}
+
+template <typename T>
+T* Matrix<T, Device::CPU>::Buffer() EL_NO_RELEASE_EXCEPT
+{
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot return non-const buffer of locked Matrix");
+#endif
     return data_;
 }
 
-template<typename Ring>
-Ring* Matrix<Ring, Device::CPU>::Buffer(Int i, Int j) EL_NO_RELEASE_EXCEPT
+template <typename T>
+T* Matrix<T, Device::CPU>::Buffer(Int i, Int j) EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if (this->Locked())
-          LogicError("Cannot return non-const buffer of locked Matrix");
-   )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot return non-const buffer of locked Matrix");
+#endif
     if (data_ == nullptr)
         return nullptr;
     if (i == END) i = this->Height() - 1;
@@ -258,15 +233,15 @@ Ring* Matrix<Ring, Device::CPU>::Buffer(Int i, Int j) EL_NO_RELEASE_EXCEPT
     return &data_[i+j*this->LDim()];
 }
 
-template<typename Ring>
-const Ring* Matrix<Ring, Device::CPU>::LockedBuffer() const EL_NO_EXCEPT
+template <typename T>
+const T* Matrix<T, Device::CPU>::LockedBuffer() const EL_NO_EXCEPT
 { return data_; }
 
-template<typename Ring>
-const Ring*
-Matrix<Ring, Device::CPU>::LockedBuffer(Int i, Int j) const EL_NO_EXCEPT
+template <typename T>
+const T*
+Matrix<T, Device::CPU>::LockedBuffer(Int i, Int j) const EL_NO_EXCEPT
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     if (data_ == nullptr)
         return nullptr;
     if (i == END) i = this->Height() - 1;
@@ -277,8 +252,8 @@ Matrix<Ring, Device::CPU>::LockedBuffer(Int i, Int j) const EL_NO_EXCEPT
 // Advanced functions
 // ==================
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::SetMemoryMode(unsigned int mode)
+template <typename T>
+void Matrix<T, Device::CPU>::SetMemoryMode(memory_mode_type mode)
 {
     const auto oldBuffer = memory_.Buffer();
     memory_.SetMode(mode);
@@ -286,194 +261,245 @@ void Matrix<Ring, Device::CPU>::SetMemoryMode(unsigned int mode)
         data_ = memory_.Buffer();
 }
 
-template<typename Ring>
-unsigned int Matrix<Ring, Device::CPU>::MemoryMode() const EL_NO_EXCEPT
+template <typename T>
+auto Matrix<T, Device::CPU>::MemoryMode() const EL_NO_EXCEPT
+    -> memory_mode_type
 { return memory_.Mode(); }
 
 // Single-entry manipulation
 // =========================
 
-template<typename Ring>
-Ring Matrix<Ring, Device::CPU>::Get(Int i, Int j) const
+template <typename T>
+T Matrix<T, Device::CPU>::Get(Int i, Int j) const
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(this->AssertValidEntry(i, j))
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
     return CRef(i, j);
 }
 
-template<typename Ring>
-Base<Ring> Matrix<Ring, Device::CPU>::GetRealPart(Int i, Int j) const
+template <typename T>
+T Matrix<T, Device::CPU>::do_get_(
+    index_type const& i, index_type const& j) const
+{
+    return this->Get(i,j);
+}
+
+template <typename T>
+Base<T> Matrix<T, Device::CPU>::GetRealPart(Int i, Int j) const
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(this->AssertValidEntry(i, j))
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
     return El::RealPart(CRef(i, j));
 }
 
-template<typename Ring>
-Base<Ring> Matrix<Ring, Device::CPU>::GetImagPart(Int i, Int j) const
+template <typename T>
+Base<T> Matrix<T, Device::CPU>::GetImagPart(Int i, Int j) const
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(this->AssertValidEntry(i, j))
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
     return El::ImagPart(CRef(i, j));
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::Set(Int i, Int j, Ring const& alpha)
+template <typename T>
+void Matrix<T, Device::CPU>::Set(Int i, Int j, T const& alpha)
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertValidEntry(i, j);
-      if (this->Locked())
-          LogicError("Cannot modify data of locked matrices");
-   )
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot modify data of locked matrices");
+#endif
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
     Ref(i, j) = alpha;
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::Set(Entry<Ring> const& entry)
-EL_NO_RELEASE_EXCEPT
-{ Set(entry.i, entry.j, entry.value); }
+template <typename T>
+void Matrix<T, Device::CPU>::do_set_(
+    index_type const& i, index_type const& j, T const& alpha)
+{
+    this->Set(i,j,alpha);
+}
 
-template<typename Ring>
-void
-Matrix<Ring, Device::CPU>::SetRealPart(
-    Int i, Int j, Base<Ring> const& alpha)
+template <typename T>
+void Matrix<T, Device::CPU>::Set(Entry<T> const& entry)
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertValidEntry(i, j);
-      if (this->Locked())
-          LogicError("Cannot modify data of locked matrices");
-   )
+    Set(entry.i, entry.j, entry.value);
+}
+
+template <typename T>
+void
+Matrix<T, Device::CPU>::SetRealPart(
+    Int i, Int j, Base<T> const& alpha)
+EL_NO_RELEASE_EXCEPT
+{
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot modify data of locked matrices");
+#endif
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
     El::SetRealPart(Ref(i, j), alpha);
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::SetRealPart(Entry<Base<Ring>> const& entry)
-EL_NO_RELEASE_EXCEPT
-{ SetRealPart(entry.i, entry.j, entry.value); }
-
-template<typename Ring>
-void
-Matrix<Ring, Device::CPU>::SetImagPart(Int i, Int j, Base<Ring> const& alpha)
+template <typename T>
+void Matrix<T, Device::CPU>::SetRealPart(Entry<Base<T>> const& entry)
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertValidEntry(i, j);
-      if (this->Locked())
-          LogicError("Cannot modify data of locked matrices");
-   )
+    SetRealPart(entry.i, entry.j, entry.value);
+}
+
+template <typename T>
+void
+Matrix<T, Device::CPU>::SetImagPart(Int i, Int j, Base<T> const& alpha)
+EL_NO_RELEASE_EXCEPT
+{
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot modify data of locked matrices");
+#endif
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
     El::SetImagPart(Ref(i, j), alpha);
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::SetImagPart(Entry<Base<Ring>> const& entry)
-EL_NO_RELEASE_EXCEPT
-{ SetImagPart(entry.i, entry.j, entry.value); }
-
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::Update(Int i, Int j, Ring const& alpha)
+template <typename T>
+void Matrix<T, Device::CPU>::SetImagPart(Entry<Base<T>> const& entry)
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertValidEntry(i, j);
-      if (this->Locked())
-          LogicError("Cannot modify data of locked matrices");
-   )
+    SetImagPart(entry.i, entry.j, entry.value);
+}
+
+template <typename T>
+void Matrix<T, Device::CPU>::Update(Int i, Int j, T const& alpha)
+EL_NO_RELEASE_EXCEPT
+{
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot modify data of locked matrices");
+#endif // !EL_RELEASE
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
     Ref(i, j) += alpha;
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::Update(Entry<Ring> const& entry)
-EL_NO_RELEASE_EXCEPT
-{ Update(entry.i, entry.j, entry.value); }
-
-template<typename Ring>
-void
-Matrix<Ring, Device::CPU>::UpdateRealPart(Int i, Int j, Base<Ring> const& alpha)
+template <typename T>
+void Matrix<T, Device::CPU>::Update(Entry<T> const& entry)
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertValidEntry(i, j);
-      if (this->Locked())
-          LogicError("Cannot modify data of locked matrices");
-   )
+    Update(entry.i, entry.j, entry.value);
+}
+
+template <typename T>
+void
+Matrix<T, Device::CPU>::UpdateRealPart(Int i, Int j, Base<T> const& alpha)
+EL_NO_RELEASE_EXCEPT
+{
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot modify data of locked matrices");
+#endif // !EL_RELEASE
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
     El::UpdateRealPart(Ref(i, j), alpha);
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::UpdateRealPart(Entry<Base<Ring>> const& entry)
-EL_NO_RELEASE_EXCEPT
-{ UpdateRealPart(entry.i, entry.j, entry.value); }
-
-template<typename Ring>
-void
-Matrix<Ring, Device::CPU>::UpdateImagPart(Int i, Int j, Base<Ring> const& alpha)
+template <typename T>
+void Matrix<T, Device::CPU>::UpdateRealPart(Entry<Base<T>> const& entry)
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertValidEntry(i, j);
-      if (this->Locked())
-          LogicError("Cannot modify data of locked matrices");
-   )
+    UpdateRealPart(entry.i, entry.j, entry.value);
+}
+
+template <typename T>
+void
+Matrix<T, Device::CPU>::UpdateImagPart(Int i, Int j, Base<T> const& alpha)
+EL_NO_RELEASE_EXCEPT
+{
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot modify data of locked matrices");
+#endif // EL_RELEASE
+
     if (i == END) i = this->Height() - 1;
     if (j == END) j = this->Width() - 1;
     El::UpdateImagPart(Ref(i, j), alpha);
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::UpdateImagPart(Entry<Base<Ring>> const& entry)
-EL_NO_RELEASE_EXCEPT
-{ UpdateImagPart(entry.i, entry.j, entry.value); }
-
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::MakeReal(Int i, Int j)
+template <typename T>
+void Matrix<T, Device::CPU>::UpdateImagPart(Entry<Base<T>> const& entry)
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertValidEntry(i, j);
-      if (this->Locked())
-          LogicError("Cannot modify data of locked matrices");
-   )
+    UpdateImagPart(entry.i, entry.j, entry.value);
+}
+
+template <typename T>
+void Matrix<T, Device::CPU>::MakeReal(Int i, Int j)
+EL_NO_RELEASE_EXCEPT
+{
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot modify data of locked matrices");
+#endif
+
     Set(i, j, GetRealPart(i,j));
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::Conjugate(Int i, Int j)
+template <typename T>
+void Matrix<T, Device::CPU>::Conjugate(Int i, Int j)
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertValidEntry(i, j);
-      if (this->Locked())
-          LogicError("Cannot modify data of locked matrices");
-   )
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot modify data of locked matrices");
+#endif
     Set(i, j, El::Conj(Get(i,j)));
 }
 
@@ -482,142 +508,165 @@ EL_NO_RELEASE_EXCEPT
 
 // Exchange metadata with another matrix
 // =====================================
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::ShallowSwap(Matrix<Ring, Device::CPU>& A)
+template <typename T>
+void Matrix<T, Device::CPU>::Swap(
+    Matrix<T, Device::CPU>& A) EL_NO_EXCEPT
 {
-    AbstractMatrix<Ring>::ShallowSwap(A);
+    EL_DEBUG_CSE;
+    this->SwapMetadata_(A);
+    SwapImpl_(A);
+}
+
+template <typename T>
+void Matrix<T, Device::CPU>::SwapImpl_(
+    Matrix<T, Device::CPU>& A) EL_NO_EXCEPT
+{
+    EL_DEBUG_CSE;
     memory_.ShallowSwap(A.memory_);
     std::swap(data_, A.data_);
+}
+
+template <typename T>
+void Matrix<T, Device::CPU>::do_swap_(AbstractMatrix<T>& A)
+{
+    EL_DEBUG_CSE;
+    if (A.GetDevice() == Device::CPU)
+        SwapImpl_(static_cast<Matrix<T, Device::CPU>&>(A));
+    else
+        LogicError("Source of swap does not have the same device.");
 }
 
 // Reconfigure without error-checking
 // ==================================
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::do_empty_(bool freeMemory)
+template <typename T>
+void Matrix<T, Device::CPU>::do_empty_(bool freeMemory)
 {
+    EL_DEBUG_CSE;
     if (freeMemory)
         memory_.Empty();
     data_ = nullptr;
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::Attach_
-(Int height, Int width, Ring* buffer, Int leadingDimension)
+template <typename T>
+void Matrix<T, Device::CPU>::Attach_(
+    size_type height, size_type width, value_type* buffer,
+    size_type leadingDimension)
 {
-    this->SetViewType(static_cast<El::ViewType>((this->ViewType() & ~LOCKED_OWNER) | VIEW));
+    // This is no longer locked. But it is viewing.
+    this->SetViewType(
+        static_cast<El::ViewType>((this->ViewType() & ~LOCKED_OWNER) | VIEW));
     this->SetSize_(height, width, leadingDimension);
     data_ = buffer;
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::LockedAttach_
-(Int height, Int width, const Ring* buffer, Int leadingDimension)
+template <typename T>
+void Matrix<T, Device::CPU>::LockedAttach_(
+    size_type height, size_type width, value_type const* buffer,
+    size_type leadingDimension)
 {
+    // This is now locked and viewing.
     this->SetViewType(
         static_cast<El::ViewType>(this->ViewType() | LOCKED_VIEW));
-    this->SetSize_(height,width,leadingDimension);
-    data_ = const_cast<Ring*>(buffer);
-}
-
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::Control_
-(Int height, Int width, Ring* buffer, Int leadingDimension)
-{
-    this->SetViewType(
-        static_cast<El::ViewType>(this->ViewType() & ~LOCKED_VIEW));
-    this->SetSize_(height,width,leadingDimension);
-    data_ = buffer;
+    this->SetSize_(height, width, leadingDimension);
+    data_ = const_cast<T*>(buffer);
 }
 
 // Return a reference to a single entry without error-checking
 // ===========================================================
-template<typename Ring>
-Ring const& Matrix<Ring, Device::CPU>::CRef(Int i, Int j) const
+template <typename T>
+T const& Matrix<T, Device::CPU>::CRef(Int i, Int j) const
 EL_NO_RELEASE_EXCEPT
 {
     return data_[i+j*this->LDim()];
 }
 
-template<typename Ring>
-Ring const& Matrix<Ring, Device::CPU>::operator()(Int i, Int j) const
+template <typename T>
+T const& Matrix<T, Device::CPU>::operator()(Int i, Int j) const
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(this->AssertValidEntry(i, j))
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
     return data_[i+j*this->LDim()];
 }
 
-template<typename Ring>
-Ring& Matrix<Ring, Device::CPU>::Ref(Int i, Int j)
+template <typename T>
+T& Matrix<T, Device::CPU>::Ref(Int i, Int j)
 EL_NO_RELEASE_EXCEPT
 {
     return data_[i+j*this->LDim()];
 }
 
-template<typename Ring>
-Ring& Matrix<Ring, Device::CPU>::operator()(Int i, Int j)
+template <typename T>
+T& Matrix<T, Device::CPU>::operator()(Int i, Int j)
 EL_NO_RELEASE_EXCEPT
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertValidEntry(i, j);
-      if (this->Locked())
-          LogicError("Cannot modify data of locked matrices");
-   )
+    EL_DEBUG_CSE;
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+    this->AssertValidEntry(i, j);
+#endif
+#ifndef EL_RELEASE
+    if (this->Locked())
+        LogicError("Cannot modify data of locked matrices");
+#endif
     return data_[i+j*this->LDim()];
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::do_resize_()
+template <typename T>
+void Matrix<T, Device::CPU>::do_resize_(
+    size_type const& /*height*/, size_type const& width,
+    size_type const& ldim)
 {
-    data_ = memory_.Require(this->LDim() * this->Width());
+    data_ = memory_.Require(ldim * width);
 }
 
 // For supporting duck typing
 // ==========================
-template<typename Ring>
-Matrix<Ring, Device::CPU>::Matrix(El::Grid const& grid)
+template <typename T>
+Matrix<T, Device::CPU>::Matrix(El::Grid const& grid)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
       if (grid != El::Grid::Trivial())
           LogicError("Tried to construct a Matrix with a nontrivial Grid");
-   )
+#endif
 }
 
-template<typename Ring>
-void Matrix<Ring, Device::CPU>::SetGrid(El::Grid const& grid)
+template <typename T>
+void Matrix<T, Device::CPU>::SetGrid(El::Grid const& grid)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
       if (grid != El::Grid::Trivial())
           LogicError("Tried to assign nontrivial Grid to Matrix");
-   )
+#endif
 }
 
-template<typename Ring>
-El::Grid const& Matrix<Ring, Device::CPU>::Grid() const
+template <typename T>
+El::Grid const& Matrix<T, Device::CPU>::Grid() const
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     return El::Grid::Trivial();
 }
 
-template<typename Ring>
+template <typename T>
 void
-Matrix<Ring, Device::CPU>::Align(Int colAlign, Int rowAlign, bool constrain)
+Matrix<T, Device::CPU>::Align(Int colAlign, Int rowAlign, bool constrain)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
       if (colAlign != 0 || rowAlign != 0)
           LogicError("Attempted to impose nontrivial alignment on Matrix");
-   )
+
+#endif
 }
 
-template<typename Ring>
-int Matrix<Ring, Device::CPU>::ColAlign() const EL_NO_EXCEPT { return 0; }
-template<typename Ring>
-int Matrix<Ring, Device::CPU>::RowAlign() const EL_NO_EXCEPT { return 0; }
+template <typename T>
+int Matrix<T, Device::CPU>::ColAlign() const EL_NO_EXCEPT { return 0; }
+template <typename T>
+int Matrix<T, Device::CPU>::RowAlign() const EL_NO_EXCEPT { return 0; }
 
 #ifdef EL_INSTANTIATE_CORE
 # define EL_EXTERN
@@ -625,7 +674,7 @@ int Matrix<Ring, Device::CPU>::RowAlign() const EL_NO_EXCEPT { return 0; }
 # define EL_EXTERN extern
 #endif
 
-#define PROTO(Ring) EL_EXTERN template class Matrix<Ring>;
+#define PROTO(T) EL_EXTERN template class Matrix<T>;
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD

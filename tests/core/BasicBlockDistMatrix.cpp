@@ -38,7 +38,7 @@ main( int argc, char* argv[] )
 
         DistMatrix<Complex<double>,MC,MR,BLOCK> A(n,n,g,mb,nb);
         Fill( A, Complex<double>(1) );
-        A.Matrix() *= double(commRank);
+        Scale(double(commRank), A.Matrix());
         if( print )
             Print( A, "A" );
         DistMatrix<Complex<double>> AElem( A );

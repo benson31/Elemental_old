@@ -31,6 +31,15 @@
 #include <type_traits> // std::enable_if
 #include <vector>
 
+#if __cplusplus >= 201402L
+#define H_DEPRECATED(msg) [[deprecated(msg)]]
+#elif defined(__GNUC__)
+// This ^ isn't perfect -- many non-GCC compilers define __GNUC__.
+#define H_DEPRECATED(msg) __attribute__ ((deprecated(msg)))
+#else
+#define H_DEPRECATED(msg)
+#endif
+
 #define EL_UNUSED(expr) (void)(expr)
 
 #ifdef EL_RELEASE

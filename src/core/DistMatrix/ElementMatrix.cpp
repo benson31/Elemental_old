@@ -11,7 +11,8 @@
 #include <El/blas_like/level1/Copy.hpp>
 #include <El/blas_like/level1/Scale.hpp>
 
-namespace El {
+namespace El
+{
 
 // Public section
 // ##############
@@ -20,14 +21,14 @@ namespace El {
 // ============================
 
 template <typename T>
-ElementalMatrix<T>::ElementalMatrix( const El::Grid& grid, int root )
-: AbstractDistMatrix<T>(grid,root)
+ElementalMatrix<T>::ElementalMatrix(const El::Grid& grid, int root)
+    : AbstractDistMatrix<T>(grid,root)
 { }
 
 template <typename T>
-ElementalMatrix<T>::ElementalMatrix( ElementalMatrix<T>&& A )
+ElementalMatrix<T>::ElementalMatrix(ElementalMatrix<T>&& A)
 EL_NO_EXCEPT
-: AbstractDistMatrix<T>(std::move(A))
+    : AbstractDistMatrix<T>(std::move(A))
 { }
 
 template <typename T>
@@ -37,51 +38,54 @@ ElementalMatrix<T>::~ElementalMatrix() { }
 // ==============================
 template <typename T>
 void
-ElementalMatrix<T>::Resize( Int height, Int width )
+ElementalMatrix<T>::Resize(Int height, Int width)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertNotLocked();
-      if( this->Viewing() && (height > this->height_ || width > this->width_) )
-          LogicError("Tried to increase the size of a view");
-    )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    this->AssertNotLocked();
+    if (this->Viewing()
+       && (height > this->height_ || width > this->width_))
+        LogicError("Tried to increase the size of a view");
+#endif // !EL_RELEASE
     this->height_ = height;
     this->width_ = width;
-    if( this->Participating() )
-        this->Matrix().Resize_
-        ( Length(height,this->ColShift(),this->ColStride()),
-          Length(width,this->RowShift(),this->RowStride()) );
+    if (this->Participating())
+        this->Matrix().Resize_(
+            Length(height,this->ColShift(),this->ColStride()),
+            Length(width,this->RowShift(),this->RowStride()),
+            Length(height,this->ColShift(),this->ColStride()));
 }
 
 template <typename T>
 void
-ElementalMatrix<T>::Resize( Int height, Int width, Int ldim )
+ElementalMatrix<T>::Resize(Int height, Int width, Int ldim)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      this->AssertNotLocked();
-      if( this->Viewing() &&
-          (height > this->height_ || width > this->width_ ||
-           ldim > this->Matrix().LDim()) )
-          LogicError("Tried to increase the size of a view");
-    )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    this->AssertNotLocked();
+    if (this->Viewing() &&
+        (height > this->height_ || width > this->width_ ||
+         ldim > this->Matrix().LDim()))
+        LogicError("Tried to increase the size of a view");
+#endif // !EL_RELEASE
+
     this->height_ = height;
     this->width_ = width;
-    if( this->Participating() )
+    if (this->Participating())
         this->Matrix().Resize_
-        ( Length(height,this->ColShift(),this->ColStride()),
-          Length(width,this->RowShift(),this->RowStride()), ldim );
+        (Length(height,this->ColShift(),this->ColStride()),
+          Length(width,this->RowShift(),this->RowStride()), ldim);
 }
 
 template <typename T>
 void
-ElementalMatrix<T>::MakeConsistent( bool includingViewers )
+ElementalMatrix<T>::MakeConsistent(bool includingViewers)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
 
     const Int msgLength = 9;
     Int message[msgLength];
-    if( this->CrossRank() == this->Root() )
+    if (this->CrossRank() == this->Root())
     {
         message[0] = this->viewType_;
         message[1] = this->height_;
@@ -95,9 +99,9 @@ ElementalMatrix<T>::MakeConsistent( bool includingViewers )
     }
 
     const auto& grid = *this->grid_;
-    if( !grid.InGrid() && !includingViewers )
+    if (!grid.InGrid() && !includingViewers)
         LogicError("Non-participating process called MakeConsistent");
-    if( grid.InGrid() )
+    if (grid.InGrid())
     {
         // TODO(poulson): Ensure roots are consistent within each cross
         // communicator
@@ -117,7 +121,7 @@ ElementalMatrix<T>::MakeConsistent( bool includingViewers )
         else
             LogicError("ElementalMatrix: Bad Device!");
     }
-    if( includingViewers )
+    if (includingViewers)
     {
         const Int vcRoot = grid.VCToViewing(0);
         if (this->GetLocalDevice() == Device::CPU)
@@ -155,7 +159,7 @@ ElementalMatrix<T>::MakeConsistent( bool includingViewers )
     this->rowAlign_        = newRowAlign;
 
     this->SetShifts();
-    this->Resize( newHeight, newWidth );
+    this->Resize(newHeight, newWidth);
 }
 
 // Realignment
@@ -163,18 +167,18 @@ ElementalMatrix<T>::MakeConsistent( bool includingViewers )
 
 template <typename T>
 void
-ElementalMatrix<T>::Align( int colAlign, int rowAlign, bool constrain )
+ElementalMatrix<T>::Align(int colAlign, int rowAlign, bool constrain)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     const bool requireChange =
       this->colAlign_ != colAlign || this->rowAlign_ != rowAlign;
-    EL_DEBUG_ONLY(
-      if( this->Viewing() && requireChange )
-          LogicError("Tried to realign a view");
-    )
-    if( requireChange )
-        this->Empty( false );
-    if( constrain )
+#ifndef EL_RELEASE
+    if (this->Viewing() && requireChange)
+        LogicError("Tried to realign a view");
+#endif // !EL_RELEASE
+    if (requireChange)
+        this->Empty(false);
+    if (constrain)
     {
         this->colConstrained_ = true;
         this->rowConstrained_ = true;
@@ -186,16 +190,16 @@ ElementalMatrix<T>::Align( int colAlign, int rowAlign, bool constrain )
 
 template <typename T>
 void
-ElementalMatrix<T>::AlignCols( int colAlign, bool constrain )
+ElementalMatrix<T>::AlignCols(int colAlign, bool constrain)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( this->Viewing() && this->colAlign_ != colAlign )
-          LogicError("Tried to realign a view");
-    )
-    if( this->colAlign_ != colAlign )
-        this->EmptyData( false );
-    if( constrain )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if (this->Viewing() && this->colAlign_ != colAlign)
+        LogicError("Tried to realign a view");
+#endif // !EL_RELEASE
+    if (this->colAlign_ != colAlign)
+        this->EmptyData(false);
+    if (constrain)
         this->colConstrained_ = true;
     this->colAlign_ = colAlign;
     this->SetColShift();
@@ -203,16 +207,16 @@ ElementalMatrix<T>::AlignCols( int colAlign, bool constrain )
 
 template <typename T>
 void
-ElementalMatrix<T>::AlignRows( int rowAlign, bool constrain )
+ElementalMatrix<T>::AlignRows(int rowAlign, bool constrain)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( this->Viewing() && this->rowAlign_ != rowAlign )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+      if (this->Viewing() && this->rowAlign_ != rowAlign)
           LogicError("Tried to realign a view");
-    )
-    if( this->rowAlign_ != rowAlign )
-        this->EmptyData( false );
-    if( constrain )
+#endif // !EL_RELEASE
+    if (this->rowAlign_ != rowAlign)
+        this->EmptyData(false);
+    if (constrain)
         this->rowConstrained_ = true;
     this->rowAlign_ = rowAlign;
     this->SetRowShift();
@@ -221,134 +225,134 @@ ElementalMatrix<T>::AlignRows( int rowAlign, bool constrain )
 template <typename T>
 void
 ElementalMatrix<T>::AlignWith
-( const El::DistData& data, bool constrain, bool allowMismatch )
+(const El::DistData& data, bool constrain, bool allowMismatch)
 {
-    EL_DEBUG_CSE
-    this->AlignColsWith( data, constrain, allowMismatch );
-    this->AlignRowsWith( data, constrain, allowMismatch );
+    EL_DEBUG_CSE;
+    this->AlignColsWith(data, constrain, allowMismatch);
+    this->AlignRowsWith(data, constrain, allowMismatch);
 }
 
 template <typename T>
 void
 ElementalMatrix<T>::AlignColsWith
-( const El::DistData& data, bool constrain, bool allowMismatch )
+(const El::DistData& data, bool constrain, bool allowMismatch)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( data.blockHeight != 1 || data.colCut != 0 )
-          LogicError("Tried to align elemental matrix with non-trivial block");
-    )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if (data.blockHeight != 1 || data.colCut != 0)
+        LogicError("Tried to align elemental matrix with non-trivial block");
+#endif // !EL_RELEASE
 
-    this->SetGrid( *data.grid );
-    this->SetRoot( data.root );
-    if( data.colDist == this->ColDist() ||
-        data.colDist == this->PartialColDist() )
-        this->AlignCols( data.colAlign, constrain );
-    else if( data.rowDist == this->ColDist() ||
-             data.rowDist == this->PartialColDist() )
-        this->AlignCols( data.rowAlign, constrain );
-    else if( data.colDist == this->PartialUnionColDist() )
-        this->AlignCols( data.colAlign % this->ColStride(), constrain );
-    else if( data.rowDist == this->PartialUnionColDist() )
-        this->AlignCols( data.rowAlign % this->ColStride(), constrain );
-    else if( this->ColDist() != this->CollectedColDist() &&
+    this->SetGrid(*data.grid);
+    this->SetRoot(data.root);
+    if (data.colDist == this->ColDist() ||
+        data.colDist == this->PartialColDist())
+        this->AlignCols(data.colAlign, constrain);
+    else if (data.rowDist == this->ColDist() ||
+             data.rowDist == this->PartialColDist())
+        this->AlignCols(data.rowAlign, constrain);
+    else if (data.colDist == this->PartialUnionColDist())
+        this->AlignCols(data.colAlign % this->ColStride(), constrain);
+    else if (data.rowDist == this->PartialUnionColDist())
+        this->AlignCols(data.rowAlign % this->ColStride(), constrain);
+    else if (this->ColDist() != this->CollectedColDist() &&
              data.colDist    != this->CollectedColDist() &&
-             data.rowDist    != this->CollectedColDist() && !allowMismatch )
+             data.rowDist    != this->CollectedColDist() && !allowMismatch)
         LogicError("Nonsensical alignment");
 }
 
 template <typename T>
 void ElementalMatrix<T>::AlignRowsWith
-( const El::DistData& data, bool constrain, bool allowMismatch )
+(const El::DistData& data, bool constrain, bool allowMismatch)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( data.blockWidth != 1 || data.rowCut != 0 )
-          LogicError("Tried to align elemental matrix with non-trivial block");
-    )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if (data.blockWidth != 1 || data.rowCut != 0)
+        LogicError("Tried to align elemental matrix with non-trivial block");
+#endif // !EL_RELEASE
 
-    this->SetGrid( *data.grid );
-    this->SetRoot( data.root );
-    if( data.colDist == this->RowDist() ||
-        data.colDist == this->PartialRowDist() )
-        this->AlignRows( data.colAlign, constrain );
-    else if( data.rowDist == this->RowDist() ||
-             data.rowDist == this->PartialRowDist() )
-        this->AlignRows( data.rowAlign, constrain );
-    else if( data.colDist == this->PartialUnionRowDist() )
-        this->AlignRows( data.colAlign % this->RowStride(), constrain );
-    else if( data.rowDist == this->PartialUnionRowDist() )
-        this->AlignRows( data.rowAlign % this->RowStride(), constrain );
-    else if( this->RowDist() != this->CollectedRowDist() &&
+    this->SetGrid(*data.grid);
+    this->SetRoot(data.root);
+    if (data.colDist == this->RowDist() ||
+        data.colDist == this->PartialRowDist())
+        this->AlignRows(data.colAlign, constrain);
+    else if (data.rowDist == this->RowDist() ||
+             data.rowDist == this->PartialRowDist())
+        this->AlignRows(data.rowAlign, constrain);
+    else if (data.colDist == this->PartialUnionRowDist())
+        this->AlignRows(data.colAlign % this->RowStride(), constrain);
+    else if (data.rowDist == this->PartialUnionRowDist())
+        this->AlignRows(data.rowAlign % this->RowStride(), constrain);
+    else if (this->RowDist() != this->CollectedRowDist() &&
              data.colDist    != this->CollectedRowDist() &&
-             data.rowDist    != this->CollectedRowDist() && !allowMismatch )
+             data.rowDist    != this->CollectedRowDist() && !allowMismatch)
         LogicError("Nonsensical alignment");
 }
 
 template <typename T>
 void
 ElementalMatrix<T>::AlignAndResize
-( int colAlign, int rowAlign, Int height, Int width,
-  bool force, bool constrain )
+(int colAlign, int rowAlign, Int height, Int width,
+  bool force, bool constrain)
 {
-    EL_DEBUG_CSE
-    if( !this->Viewing() )
+    EL_DEBUG_CSE;
+    if (!this->Viewing())
     {
-        if( force || !this->ColConstrained() )
+        if (force || !this->ColConstrained())
         {
             this->colAlign_ = colAlign;
             this->SetColShift();
         }
-        if( force || !this->RowConstrained() )
+        if (force || !this->RowConstrained())
         {
             this->rowAlign_ = rowAlign;
             this->SetRowShift();
         }
     }
-    if( constrain )
+    if (constrain)
     {
         this->colConstrained_ = true;
         this->rowConstrained_ = true;
     }
-    if( force && (this->colAlign_ != colAlign || this->rowAlign_ != rowAlign) )
+    if (force && (this->colAlign_ != colAlign || this->rowAlign_ != rowAlign))
         LogicError("Could not set alignments");
-    this->Resize( height, width );
+    this->Resize(height, width);
 }
 
 template <typename T>
 void
 ElementalMatrix<T>::AlignColsAndResize
-( int colAlign, Int height, Int width, bool force, bool constrain )
+(int colAlign, Int height, Int width, bool force, bool constrain)
 {
-    EL_DEBUG_CSE
-    if( !this->Viewing() && (force || !this->ColConstrained()) )
+    EL_DEBUG_CSE;
+    if (!this->Viewing() && (force || !this->ColConstrained()))
     {
         this->colAlign_ = colAlign;
         this->SetColShift();
     }
-    if( constrain )
+    if (constrain)
         this->colConstrained_ = true;
-    if( force && this->colAlign_ != colAlign )
+    if (force && this->colAlign_ != colAlign)
         LogicError("Could not set col alignment");
-    this->Resize( height, width );
+    this->Resize(height, width);
 }
 
 template <typename T>
 void
 ElementalMatrix<T>::AlignRowsAndResize
-( int rowAlign, Int height, Int width, bool force, bool constrain )
+(int rowAlign, Int height, Int width, bool force, bool constrain)
 {
-    EL_DEBUG_CSE
-    if( !this->Viewing() && (force || !this->RowConstrained()) )
+    EL_DEBUG_CSE;
+    if (!this->Viewing() && (force || !this->RowConstrained()))
     {
         this->rowAlign_ = rowAlign;
         this->SetRowShift();
     }
-    if( constrain )
+    if (constrain)
         this->rowConstrained_ = true;
-    if( force && this->rowAlign_ != rowAlign )
+    if (force && this->rowAlign_ != rowAlign)
         LogicError("Could not set row alignment");
-    this->Resize( height, width );
+    this->Resize(height, width);
 }
 
 // Buffer attachment
@@ -356,9 +360,9 @@ ElementalMatrix<T>::AlignRowsAndResize
 
 template <typename T>
 void
-ElementalMatrix<T>::Attach
-( Int height, Int width, const El::Grid& g,
-  int colAlign, int rowAlign, T* buffer, Int ldim, int root )
+ElementalMatrix<T>::Attach(
+    Int height, Int width, const El::Grid& g,
+    int colAlign, int rowAlign, T* buffer, Int ldim, int root)
 {
     EL_DEBUG_CSE
     this->Empty();
@@ -374,39 +378,55 @@ ElementalMatrix<T>::Attach
     this->rootConstrained_ = true;
     this->viewType_ = VIEW;
     this->SetShifts();
-    if( this->Participating() )
+    if (this->Participating())
     {
         Int localHeight = Length(height,this->colShift_,this->ColStride());
         Int localWidth = Length(width,this->rowShift_,this->RowStride());
-        this->Matrix().Attach_( localHeight, localWidth, buffer, ldim );
+
+        switch (this->GetLocalDevice())
+        {
+        case El::Device::CPU:
+            static_cast<Matrix<T,Device::CPU>&>(this->Matrix()).
+                Attach_(localHeight, localWidth, buffer, ldim);
+            break;
+#ifdef HYDROGEN_HAVE_CUDA
+        case El::Device::GPU:
+            static_cast<Matrix<T,Device::GPU>&>(this->Matrix()).
+                Attach_(localHeight, localWidth, buffer, ldim);
+            break;
+#endif
+        default:
+            LogicError("Bad device.");
+        }
     }
 }
 
 template <typename T>
 void
-ElementalMatrix<T>::Attach
-( Int height, Int width, const El::Grid& g,
-  int colAlign, int rowAlign, El::Matrix<T>& A, int root )
+ElementalMatrix<T>::Attach(
+    Int height, Int width, const El::Grid& g,
+    int colAlign, int rowAlign, El::Matrix<T>& A, int root)
 {
     // TODO(poulson): Assert that the local dimensions are correct
-    Attach( height, width, g, colAlign, rowAlign, A.Buffer(), A.LDim(), root );
+    Attach(height, width, g, colAlign, rowAlign, A.Buffer(), A.LDim(), root);
 }
 
 template <typename T>
 void
-ElementalMatrix<T>::Attach( const El::Grid& g, El::Matrix<T>& A )
+ElementalMatrix<T>::Attach(const El::Grid& g, El::Matrix<T>& A)
 {
-    EL_DEBUG_CSE
-    if( g.Size() != 1 )
+    EL_DEBUG_CSE;
+
+    if (g.Size() != 1)
         LogicError("Assumed a grid size of one");
-    Attach( A.Height(), A.Width(), g, 0, 0, A.Buffer(), A.LDim() );
+    Attach(A.Height(), A.Width(), g, 0, 0, A.Buffer(), A.LDim());
 }
 
 template <typename T>
 void
-ElementalMatrix<T>::LockedAttach
-( Int height, Int width, const El::Grid& g,
-  int colAlign, int rowAlign, const T* buffer, Int ldim, int root )
+ElementalMatrix<T>::LockedAttach(
+    Int height, Int width, const El::Grid& g,
+    int colAlign, int rowAlign, const T* buffer, Int ldim, int root)
 {
     EL_DEBUG_CSE
     this->Empty();
@@ -422,33 +442,49 @@ ElementalMatrix<T>::LockedAttach
     this->rootConstrained_ = true;
     this->viewType_ = LOCKED_VIEW;
     this->SetShifts();
-    if( this->Participating() )
+    if (this->Participating())
     {
         Int localHeight = Length(height,this->colShift_,this->ColStride());
         Int localWidth = Length(width,this->rowShift_,this->RowStride());
-        this->Matrix().LockedAttach_( localHeight, localWidth, buffer, ldim );
+
+        switch (this->GetLocalDevice())
+        {
+        case El::Device::CPU:
+            static_cast<Matrix<T,Device::CPU>&>(this->Matrix()).
+                LockedAttach_(localHeight, localWidth, buffer, ldim);
+            break;
+#ifdef HYDROGEN_HAVE_CUDA
+        case El::Device::GPU:
+            static_cast<Matrix<T,Device::GPU>&>(this->Matrix()).
+                LockedAttach_(localHeight, localWidth, buffer, ldim);
+            break;
+#endif
+        default:
+            LogicError("Bad device.");
+        }
     }
 }
 
 template <typename T>
 void
-ElementalMatrix<T>::LockedAttach
-( Int height, Int width, const El::Grid& g,
-  int colAlign, int rowAlign, const El::Matrix<T>& A, int root )
+ElementalMatrix<T>::LockedAttach(
+    Int height, Int width, const El::Grid& g,
+    int colAlign, int rowAlign, const El::Matrix<T>& A, int root)
 {
     // TODO(poulson): Assert that the local dimensions are correct
-    LockedAttach
-    ( height, width, g, colAlign, rowAlign, A.LockedBuffer(), A.LDim(), root );
+    LockedAttach(
+        height, width, g, colAlign, rowAlign,
+        A.LockedBuffer(), A.LDim(), root);
 }
 
 template <typename T>
 void
-ElementalMatrix<T>::LockedAttach( const El::Grid& g, const El::Matrix<T>& A )
+ElementalMatrix<T>::LockedAttach(const El::Grid& g, const El::Matrix<T>& A)
 {
-    EL_DEBUG_CSE
-    if( g.Size() != 1 )
+    EL_DEBUG_CSE;
+    if (g.Size() != 1)
         LogicError("Assumed a grid size of one");
-    LockedAttach( A.Height(), A.Width(), g, 0, 0, A.LockedBuffer(), A.LDim() );
+    LockedAttach(A.Height(), A.Width(), g, 0, 0, A.LockedBuffer(), A.LDim());
 }
 
 // Operator overloading
@@ -458,19 +494,19 @@ ElementalMatrix<T>::LockedAttach( const El::Grid& g, const El::Matrix<T>& A )
 // ----
 template <typename T>
 const ElementalMatrix<T>&
-ElementalMatrix<T>::operator=( const ElementalMatrix<T>& A )
+ElementalMatrix<T>::operator=(const ElementalMatrix<T>& A)
 {
-    EL_DEBUG_CSE
-    El::Copy( A, *this );
+    EL_DEBUG_CSE;
+    El::Copy(A, *this);
     return *this;
 }
 
 template <typename T>
 const ElementalMatrix<T>&
-ElementalMatrix<T>::operator=( const AbstractDistMatrix<T>& A )
+ElementalMatrix<T>::operator=(const AbstractDistMatrix<T>& A)
 {
-    EL_DEBUG_CSE
-    El::Copy( A, *this );
+    EL_DEBUG_CSE;
+    El::Copy(A, *this);
     return *this;
 }
 
@@ -478,10 +514,10 @@ ElementalMatrix<T>::operator=( const AbstractDistMatrix<T>& A )
 // ---------
 template <typename T>
 const ElementalMatrix<T>&
-ElementalMatrix<T>::operator*=( T alpha )
+ElementalMatrix<T>::operator*=(T alpha)
 {
-    EL_DEBUG_CSE
-    Scale( alpha, *this );
+    EL_DEBUG_CSE;
+    Scale(alpha, *this);
     return *this;
 }
 
@@ -489,37 +525,37 @@ ElementalMatrix<T>::operator*=( T alpha )
 // --------------------
 template <typename T>
 const ElementalMatrix<T>&
-ElementalMatrix<T>::operator+=( const ElementalMatrix<T>& A )
+ElementalMatrix<T>::operator+=(const ElementalMatrix<T>& A)
 {
-    EL_DEBUG_CSE
-    Axpy( T(1), A, *this );
+    EL_DEBUG_CSE;
+    Axpy(T(1), A, *this);
     return *this;
 }
 
 template <typename T>
 const ElementalMatrix<T>&
-ElementalMatrix<T>::operator+=( const AbstractDistMatrix<T>& A )
+ElementalMatrix<T>::operator+=(const AbstractDistMatrix<T>& A)
 {
-    EL_DEBUG_CSE
-    Axpy( T(1), A, *this );
+    EL_DEBUG_CSE;
+    Axpy(T(1), A, *this);
     return *this;
 }
 
 template <typename T>
 const ElementalMatrix<T>&
-ElementalMatrix<T>::operator-=( const ElementalMatrix<T>& A )
+ElementalMatrix<T>::operator-=(const ElementalMatrix<T>& A)
 {
-    EL_DEBUG_CSE
-    Axpy( T(-1), A, *this );
+    EL_DEBUG_CSE;
+    Axpy(T(-1), A, *this);
     return *this;
 }
 
 template <typename T>
 const ElementalMatrix<T>&
-ElementalMatrix<T>::operator-=( const AbstractDistMatrix<T>& A )
+ElementalMatrix<T>::operator-=(const AbstractDistMatrix<T>& A)
 {
-    EL_DEBUG_CSE
-    Axpy( T(-1), A, *this );
+    EL_DEBUG_CSE;
+    Axpy(T(-1), A, *this);
     return *this;
 }
 
@@ -527,16 +563,16 @@ ElementalMatrix<T>::operator-=( const AbstractDistMatrix<T>& A )
 // ---------------
 template <typename T>
 ElementalMatrix<T>&
-ElementalMatrix<T>::operator=( ElementalMatrix<T>&& A )
+ElementalMatrix<T>::operator=(ElementalMatrix<T>&& A)
 {
-    EL_DEBUG_CSE
-    if( this->Viewing() || A.Viewing() )
+    EL_DEBUG_CSE;
+    if (this->Viewing() || A.Viewing())
     {
-        El::Copy( A, *this );
+        El::Copy(A, *this);
     }
     else
     {
-        this->Matrix().ShallowSwap( A.Matrix() );
+        this->Matrix().Swap(A.Matrix());
         this->viewType_ = A.viewType_;
         this->height_ = A.height_;
         this->width_ = A.width_;
@@ -560,60 +596,60 @@ ElementalMatrix<T>::operator=( ElementalMatrix<T>&& A )
 // ------------------------
 
 template <typename T>
-int ElementalMatrix<T>::RowOwner( Int i ) const EL_NO_EXCEPT
+int ElementalMatrix<T>::RowOwner(Int i) const EL_NO_EXCEPT
 {
-    if( i == END ) i = this->height_ - 1;
+    if (i == END) i = this->height_ - 1;
     const Int rowOwner = (i+this->ColAlign()) % this->ColStride();
     return int(rowOwner);
 }
 
 template <typename T>
-int ElementalMatrix<T>::ColOwner( Int j ) const EL_NO_EXCEPT
+int ElementalMatrix<T>::ColOwner(Int j) const EL_NO_EXCEPT
 {
-    if( j == END ) j = this->width_ - 1;
+    if (j == END) j = this->width_ - 1;
     const Int colOwner = (j+this->RowAlign()) % this->RowStride();
     return int(colOwner);
 }
 
 template <typename T>
-Int ElementalMatrix<T>::LocalRowOffset( Int i ) const EL_NO_EXCEPT
+Int ElementalMatrix<T>::LocalRowOffset(Int i) const EL_NO_EXCEPT
 {
-    if( i == END ) i = this->height_ - 1;
+    if (i == END) i = this->height_ - 1;
     return Length_(i,this->ColShift(),this->ColStride());
 }
 
 template <typename T>
-Int ElementalMatrix<T>::LocalColOffset( Int j ) const EL_NO_EXCEPT
+Int ElementalMatrix<T>::LocalColOffset(Int j) const EL_NO_EXCEPT
 {
-    if( j == END ) j = this->width_ - 1;
+    if (j == END) j = this->width_ - 1;
     return Length_(j,this->RowShift(),this->RowStride());
 }
 
 template <typename T>
-Int ElementalMatrix<T>::LocalRowOffset( Int i, int rowOwner ) const EL_NO_EXCEPT
+Int ElementalMatrix<T>::LocalRowOffset(Int i, int rowOwner) const EL_NO_EXCEPT
 {
-    if( i == END ) i = this->height_ - 1;
+    if (i == END) i = this->height_ - 1;
     return Length_(i,rowOwner,this->ColAlign(),this->ColStride());
 }
 
 template <typename T>
-Int ElementalMatrix<T>::LocalColOffset( Int j, int colOwner ) const EL_NO_EXCEPT
+Int ElementalMatrix<T>::LocalColOffset(Int j, int colOwner) const EL_NO_EXCEPT
 {
-    if( j == END ) j = this->width_ - 1;
+    if (j == END) j = this->width_ - 1;
     return Length_(j,colOwner,this->RowAlign(),this->RowStride());
 }
 
 template <typename T>
-Int ElementalMatrix<T>::GlobalRow( Int iLoc ) const EL_NO_EXCEPT
+Int ElementalMatrix<T>::GlobalRow(Int iLoc) const EL_NO_EXCEPT
 {
-    if( iLoc == END ) iLoc = this->LocalHeight() - 1;
+    if (iLoc == END) iLoc = this->LocalHeight() - 1;
     return this->ColShift() + iLoc*this->ColStride();
 }
 
 template <typename T>
-Int ElementalMatrix<T>::GlobalCol( Int jLoc ) const EL_NO_EXCEPT
+Int ElementalMatrix<T>::GlobalCol(Int jLoc) const EL_NO_EXCEPT
 {
-    if( jLoc == END ) jLoc = this->LocalWidth() - 1;
+    if (jLoc == END) jLoc = this->LocalWidth() - 1;
     return this->RowShift() + jLoc*this->RowStride();
 }
 
@@ -621,44 +657,44 @@ Int ElementalMatrix<T>::GlobalCol( Int jLoc ) const EL_NO_EXCEPT
 // =====================
 template <typename T>
 bool ElementalMatrix<T>::DiagonalAlignedWith
-( const El::DistData& d, Int offset ) const EL_NO_EXCEPT
+(const El::DistData& d, Int offset) const EL_NO_EXCEPT
 {
-    EL_DEBUG_CSE
-    if( this->Grid() != *d.grid )
+    EL_DEBUG_CSE;
+    if (this->Grid() != *d.grid)
         return false;
 
-    EL_DEBUG_ONLY(
-      if( d.blockHeight != 1 || d.blockWidth != 1 ||
-          d.colCut != 0 || d.rowCut != 0 )
-          return false;
-    )
+#ifndef EL_RELEASE
+    if (d.blockHeight != 1 || d.blockWidth != 1 ||
+        d.colCut != 0 || d.rowCut != 0)
+        return false;
+#endif // !EL_RELEASE
 
     const Int diagRoot = DiagonalRoot(offset);
-    if( diagRoot != d.root )
+    if (diagRoot != d.root)
         return false;
 
     const int diagAlign = DiagonalAlign(offset);
-    const Dist UDiag = DiagCol( this->ColDist(), this->RowDist() );
-    const Dist VDiag = DiagRow( this->ColDist(), this->RowDist() );
-    if( d.colDist == UDiag && d.rowDist == VDiag )
+    const Dist UDiag = DiagCol(this->ColDist(), this->RowDist());
+    const Dist VDiag = DiagRow(this->ColDist(), this->RowDist());
+    if (d.colDist == UDiag && d.rowDist == VDiag)
         return d.colAlign == diagAlign;
-    else if( d.colDist == VDiag && d.rowDist == UDiag )
+    else if (d.colDist == VDiag && d.rowDist == UDiag)
         return d.rowAlign == diagAlign;
     else
         return false;
 }
 
 template <typename T>
-int ElementalMatrix<T>::DiagonalRoot( Int offset ) const EL_NO_EXCEPT
+int ElementalMatrix<T>::DiagonalRoot(Int offset) const EL_NO_EXCEPT
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     const auto& grid = this->Grid();
 
-    if( this->ColDist() == MC && this->RowDist() == MR )
+    if (this->ColDist() == MC && this->RowDist() == MR)
     {
         // Result is an [MD,* ] or [* ,MD]
         int owner;
-        if( offset >= 0 )
+        if (offset >= 0)
         {
             const int procRow = this->ColAlign();
             const int procCol = (this->RowAlign()+offset) % this->RowStride();
@@ -672,11 +708,11 @@ int ElementalMatrix<T>::DiagonalRoot( Int offset ) const EL_NO_EXCEPT
         }
         return grid.Diag(owner);
     }
-    else if( this->ColDist() == MR && this->RowDist() == MC )
+    else if (this->ColDist() == MR && this->RowDist() == MC)
     {
         // Result is an [MD,* ] or [* ,MD]
         int owner;
-        if( offset >= 0 )
+        if (offset >= 0)
         {
             const int procCol = this->ColAlign();
             const int procRow = (this->RowAlign()+offset) % this->RowStride();
@@ -695,16 +731,16 @@ int ElementalMatrix<T>::DiagonalRoot( Int offset ) const EL_NO_EXCEPT
 }
 
 template <typename T>
-int ElementalMatrix<T>::DiagonalAlign( Int offset ) const EL_NO_EXCEPT
+int ElementalMatrix<T>::DiagonalAlign(Int offset) const EL_NO_EXCEPT
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     const auto& grid = this->Grid();
 
-    if( this->ColDist() == MC && this->RowDist() == MR )
+    if (this->ColDist() == MC && this->RowDist() == MR)
     {
         // Result is an [MD,* ] or [* ,MD]
         int owner;
-        if( offset >= 0 )
+        if (offset >= 0)
         {
             const int procRow = this->ColAlign();
             const int procCol = (this->RowAlign()+offset) % this->RowStride();
@@ -718,11 +754,11 @@ int ElementalMatrix<T>::DiagonalAlign( Int offset ) const EL_NO_EXCEPT
         }
         return grid.DiagRank(owner);
     }
-    else if( this->ColDist() == MR && this->RowDist() == MC )
+    else if (this->ColDist() == MR && this->RowDist() == MC)
     {
         // Result is an [MD,* ] or [* ,MD]
         int owner;
-        if( offset >= 0 )
+        if (offset >= 0)
         {
             const int procCol = this->ColAlign();
             const int procRow = (this->RowAlign()+offset) % this->RowStride();
@@ -736,10 +772,10 @@ int ElementalMatrix<T>::DiagonalAlign( Int offset ) const EL_NO_EXCEPT
         }
         return grid.DiagRank(owner);
     }
-    else if( this->ColDist() == STAR )
+    else if (this->ColDist() == STAR)
     {
         // Result is a [V,* ] or [* ,V]
-        if( offset >= 0 )
+        if (offset >= 0)
             return (this->RowAlign()+offset) % this->RowStride();
         else
             return this->RowAlign();
@@ -747,7 +783,7 @@ int ElementalMatrix<T>::DiagonalAlign( Int offset ) const EL_NO_EXCEPT
     else
     {
         // Result is [U,V] or [V,U], where V is either STAR or CIRC
-        if( offset >= 0 )
+        if (offset >= 0)
             return this->ColAlign();
         else
             return (this->ColAlign()-offset) % this->ColStride();
@@ -763,65 +799,65 @@ int ElementalMatrix<T>::DiagonalAlign( Int offset ) const EL_NO_EXCEPT
 template <typename T>
 void
 AssertConforming1x2
-( const ElementalMatrix<T>& AL, const ElementalMatrix<T>& AR )
+(const ElementalMatrix<T>& AL, const ElementalMatrix<T>& AR)
 {
-    if( AL.Height() != AR.Height() )
+    if (AL.Height() != AR.Height())
         LogicError
         ("1x2 not conformant:\n",
          DimsString(AL,"Left"),"\n",DimsString(AR,"Right"));
-    if( AL.ColAlign() != AR.ColAlign() )
+    if (AL.ColAlign() != AR.ColAlign())
         LogicError("1x2 is misaligned");
 }
 
 template <typename T>
 void
 AssertConforming2x1
-( const ElementalMatrix<T>& AT, const ElementalMatrix<T>& AB )
+(const ElementalMatrix<T>& AT, const ElementalMatrix<T>& AB)
 {
-    if( AT.Width() != AB.Width() )
+    if (AT.Width() != AB.Width())
         LogicError
         ("2x1 is not conformant:\n",
          DimsString(AT,"Top"),"\n",DimsString(AB,"Bottom"));
-    if( AT.RowAlign() != AB.RowAlign() )
+    if (AT.RowAlign() != AB.RowAlign())
         LogicError("2x1 is not aligned");
 }
 
 template <typename T>
 void
 AssertConforming2x2
-( const ElementalMatrix<T>& ATL, const ElementalMatrix<T>& ATR,
-  const ElementalMatrix<T>& ABL, const ElementalMatrix<T>& ABR )
+(const ElementalMatrix<T>& ATL, const ElementalMatrix<T>& ATR,
+  const ElementalMatrix<T>& ABL, const ElementalMatrix<T>& ABR)
 {
-    if( ATL.Width() != ABL.Width() || ATR.Width() != ABR.Width() ||
-        ATL.Height() != ATR.Height() || ABL.Height() != ABR.Height() )
+    if (ATL.Width() != ABL.Width() || ATR.Width() != ABR.Width() ||
+        ATL.Height() != ATR.Height() || ABL.Height() != ABR.Height())
         LogicError
         ("2x2 is not conformant:\n",
          DimsString(ATL,"TL"),"\n",DimsString(ATR,"TR"),"\n",
          DimsString(ABL,"BL"),"\n",DimsString(ABR,"BR"));
-    if( ATL.ColAlign() != ATR.ColAlign() ||
+    if (ATL.ColAlign() != ATR.ColAlign() ||
         ABL.ColAlign() != ABR.ColAlign() ||
         ATL.RowAlign() != ABL.RowAlign() ||
-        ATR.RowAlign() != ABR.RowAlign() )
+        ATR.RowAlign() != ABR.RowAlign())
         LogicError("2x2 set of matrices must aligned to combine");
 }
 
 template <typename T>
 void
-ElementalMatrix<T>::ShallowSwap( ElementalMatrix<T>& A )
+ElementalMatrix<T>::ShallowSwap(ElementalMatrix<T>& A)
 {
-    this->Matrix().ShallowSwap( A.Matrix() );
-    std::swap( this->viewType_, A.viewType_ );
-    std::swap( this->height_ , A.height_ );
-    std::swap( this->width_, A.width_ );
-    std::swap( this->colConstrained_, A.colConstrained_ );
-    std::swap( this->rowConstrained_, A.rowConstrained_ );
-    std::swap( this->rootConstrained_, A.rootConstrained_ );
-    std::swap( this->colAlign_, A.colAlign_ );
-    std::swap( this->rowAlign_, A.rowAlign_ );
-    std::swap( this->colShift_, A.colShift_ );
-    std::swap( this->rowShift_, A.rowShift_ );
-    std::swap( this->root_, A.root_ );
-    std::swap( this->grid_, A.grid_ );
+    this->Matrix().Swap(A.Matrix());
+    std::swap(this->viewType_, A.viewType_);
+    std::swap(this->height_ , A.height_);
+    std::swap(this->width_, A.width_);
+    std::swap(this->colConstrained_, A.colConstrained_);
+    std::swap(this->rowConstrained_, A.rowConstrained_);
+    std::swap(this->rootConstrained_, A.rootConstrained_);
+    std::swap(this->colAlign_, A.colAlign_);
+    std::swap(this->rowAlign_, A.rowAlign_);
+    std::swap(this->colShift_, A.colShift_);
+    std::swap(this->rowShift_, A.rowShift_);
+    std::swap(this->root_, A.root_);
+    std::swap(this->grid_, A.grid_);
 }
 
 // Instantiations for {Int,Real,Complex<Real>} for each Real in {float,double}
@@ -831,16 +867,16 @@ ElementalMatrix<T>::ShallowSwap( ElementalMatrix<T>& A )
 #define PROTO(T)                                                        \
     template class ElementalMatrix<T>;                      \
     template void AssertConforming1x2                                   \
-    ( const ElementalMatrix<T>& AL,                         \
-      const ElementalMatrix<T>& AR );                       \
+    (const ElementalMatrix<T>& AL,                         \
+      const ElementalMatrix<T>& AR);                       \
     template void AssertConforming2x1                                   \
-    ( const ElementalMatrix<T>& AT,                         \
-      const ElementalMatrix<T>& AB );                       \
+    (const ElementalMatrix<T>& AT,                         \
+      const ElementalMatrix<T>& AB);                       \
     template void AssertConforming2x2                                   \
-    ( const ElementalMatrix<T>& ATL,                        \
+    (const ElementalMatrix<T>& ATL,                        \
       const ElementalMatrix<T>& ATR,                        \
       const ElementalMatrix<T>& ABL,                        \
-      const ElementalMatrix<T>& ABR );
+      const ElementalMatrix<T>& ABR);
 #else
 #define PROTO(T) template class ElementalMatrix<T>;
 #endif

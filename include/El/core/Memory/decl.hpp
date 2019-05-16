@@ -47,7 +47,7 @@ public:
     Memory<G,D>& operator=(Memory<G,D>&& mem);
 
     // Exchange metadata with 'mem'
-    void ShallowSwap(Memory<G,D>& mem);
+    void ShallowSwap(Memory<G,D>& mem) EL_NO_EXCEPT;
 
     G* Buffer() const EL_NO_EXCEPT;
     size_t Size() const EL_NO_EXCEPT;

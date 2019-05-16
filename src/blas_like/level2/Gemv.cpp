@@ -132,7 +132,7 @@ void Gemv
     }
     else
     {
-        y *= beta;
+        Scale(beta, y);
     }
 }
 
