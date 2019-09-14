@@ -184,7 +184,11 @@ DistMatrix<T,COLDIST,ROWDIST,ELEMENT,D>* DM::Construct
 template <typename T, Device D>
 DistMatrix<T,ROWDIST,COLDIST,ELEMENT,D>* DM::ConstructTranspose
 (const El::Grid& g, int root) const
-{ return new DistMatrix<T,ROWDIST,COLDIST,ELEMENT,D>(g,root); }
+{
+    auto* x = new DistMatrix<T,ROWDIST,COLDIST,ELEMENT,D>(g,root);
+    SetSyncInfo(x->Matrix(), SyncInfoFromMatrix(LockedMatrix()));
+    return x;
+}
 
 template <typename T, Device D>
 typename DM::diagType*
