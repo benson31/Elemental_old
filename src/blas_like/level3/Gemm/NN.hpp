@@ -7,6 +7,9 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 
+#include <El/matrices.hpp>
+#include <El/io.hpp>
+
 namespace El {
 namespace gemm {
 
@@ -316,6 +319,150 @@ void SUMMA_NNC_impl(T alpha,
     LogicError("SUMMA_NNC_impl type-device combo not supported.");
 }
 
+template <typename T,
+          typename=DisableIf<IsDeviceValidType<T,Device::GPU>>, typename=void>
+void SUMMA_NNC_impl_multistream(T alpha,
+               AbstractDistMatrix<T> const& APre,
+               AbstractDistMatrix<T> const& BPre,
+               AbstractDistMatrix<T>& CPre)
+{
+    LogicError("SUMMA_NNC_impl_multistream type-device combo not supported.");
+}
+
+template <typename T, typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
+void SUMMA_NNC_impl_multistream(
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+
+    static int times_called = 0;
+    (void) times_called;
+    static int rank = -1;
+    if (rank < 0)
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    // Just in case
+    bool const I_AM_ROOOOT = (rank == 0);
+    (void) I_AM_ROOOOT;
+
+    constexpr auto D = Device::GPU;
+
+    AUTO_PROFILE_REGION(
+        "SUMMA.NNC.multistream",
+        SyncInfoFromMatrix(
+            static_cast<Matrix<T,D> const&>(CPre.LockedMatrix())));
+    const Int sumDim = APre.Width();
+    const Int bsize = Blocksize();
+    const Grid& g = APre.Grid();
+    auto const num_blocks = (sumDim + bsize - 1) / bsize;
+
+    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> AProx(APre);
+    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> BProx(BPre);
+    DistMatrixReadWriteProxy<T,T,MC,MR,ELEMENT,D> CProx(CPre);
+    auto& A = AProx.GetLocked();
+    auto& B = BProx.GetLocked();
+    auto& C = CProx.Get();
+
+    // Get the sync pool
+    auto const& stream_pool = GetSyncInfoPool();
+    auto const num_stream_teams =
+        stream_pool.Size() == 1UL
+        ? 1UL
+        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
+
+    // Setup the views
+    std::vector<DistMatrix<T,MC,STAR,ELEMENT,D>> A1_MC_STAR;
+    std::vector<DistMatrix<T,MR,STAR,ELEMENT,D>> B1Trans_MR_STAR;
+    std::vector<DistMatrix<T,MC,MR,ELEMENT,D>> C_TMP;
+
+    A1_MC_STAR.reserve(num_stream_teams);
+    B1Trans_MR_STAR.reserve(num_stream_teams);
+    C_TMP.reserve(num_stream_teams);
+
+    for (auto id = 0UL; id < num_stream_teams; ++id)
+    {
+        auto A1 = A1_MC_STAR.emplace(A1_MC_STAR.end(), g);
+        auto B1 = B1Trans_MR_STAR.emplace(B1Trans_MR_STAR.end(), g);
+        auto C1 = C_TMP.emplace(C_TMP.end(), C.Height(), C.Width(), g);
+
+        auto const& stream_one = stream_pool.Next();
+        auto const& stream_two = stream_pool.Next();
+
+        A1->AlignWith(C);
+        B1->AlignWith(C);
+        SetSyncInfo(A1->Matrix(), stream_one);
+        SetSyncInfo(B1->Matrix(), stream_two);
+
+        if (id == 3210UL)
+        {
+            View(*C1, C);
+            SetSyncInfo(C1->Matrix(), SyncInfoFromMatrix(C.Matrix()));
+        }
+        else
+        {
+            SetSyncInfo(C1->Matrix(), stream_two);
+
+            //Zeros(*C1, C.Height(), C.Width());
+            //C1->Resize(C.Height(), C.Width());
+            //C1->AlignWith(C);
+            Zero(*C1);
+            SetSyncInfo(C1->Matrix(), stream_two);
+        }
+    }
+
+    size_t team_id = 0;
+    for (Int k = 0; k < sumDim; k += bsize)
+    {
+        DistMatrix<T,MC,MR,ELEMENT,D> A1(g), B1(g);
+        Int const nb = Min(bsize, sumDim-k);
+
+        auto const& stream_one =
+            SyncInfoFromMatrix(A1_MC_STAR[team_id].Matrix());
+        auto const& stream_two =
+            SyncInfoFromMatrix(B1Trans_MR_STAR[team_id].Matrix());
+
+        SetSyncInfo(A1.Matrix(), stream_one);
+        SetSyncInfo(B1.Matrix(), stream_two);
+
+        A1 = A(ALL,        IR(k,k+nb));
+        B1 = B(IR(k,k+nb), ALL       );
+
+        A1_MC_STAR[team_id] = A1;
+        Transpose(B1, B1Trans_MR_STAR[team_id]);
+
+        LocalGemm(NORMAL, TRANSPOSE,
+                  alpha,
+                  A1_MC_STAR[team_id],
+                  B1Trans_MR_STAR[team_id],
+                  TypeTraits<T>::One(), C_TMP[team_id]);
+
+        team_id = (team_id + 1) % num_stream_teams;
+    }
+
+/*
+    cudaDeviceSynchronize();
+    ++times_called;
+    for (size_t ii = 0; ii < C_TMP.size(); ++ii)
+    {
+        std::string filename("C_TMP/C_TMP_");
+        filename += std::to_string(ii) + "_";
+        filename += std::to_string(times_called) + ".txt";
+        std::ofstream ofs(filename);
+        Print(Matrix<T>(C_TMP[ii].Matrix()),
+              std::string("C_TMP_") + std::to_string(times_called),
+              ofs);
+    }
+    cudaDeviceSynchronize();
+*/
+    for (size_t ii = 0; ii < C_TMP.size(); ++ii)
+    {
+        Axpy(TypeTraits<T>::One(), C_TMP[ii], C);
+    }
+}
+
 template<typename T>
 void SUMMA_NNC
 (T alpha,
@@ -332,7 +479,8 @@ void SUMMA_NNC
         break;
 #ifdef HYDROGEN_HAVE_CUDA
     case Device::GPU:
-        SUMMA_NNC_impl<Device::GPU>(alpha, APre, BPre, CPre);
+        SUMMA_NNC_impl_multistream(alpha, APre, BPre, CPre);
+//        SUMMA_NNC_impl<Device::GPU>(alpha, APre, BPre, CPre);
         break;
 #endif // HYDROGEN_HAVE_CUDA
     default:
