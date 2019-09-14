@@ -10,6 +10,27 @@
 #include <El/blas_like/level3.hpp>
 #include "El/core/Profiling.hpp"
 
+#include "./SyncInfoPool.hpp"
+
+namespace
+{
+size_t GetDefaultSyncPoolSize()
+{
+    char* size_override = getenv("H_STREAMPOOL_SIZE");
+    if (size_override)
+        return std::stoul(size_override);
+    else
+        return 1;
+}
+
+hydrogen::SyncInfoPool<hydrogen::Device::GPU> const& GetSyncInfoPool()
+{
+    static hydrogen::SyncInfoPool<hydrogen::Device::GPU>
+        pool(GetDefaultSyncPoolSize());
+    return pool;
+}
+}// namespace <anon>
+
 #include "./Gemm/NN.hpp"
 #include "./Gemm/NT.hpp"
 #include "./Gemm/TN.hpp"
@@ -60,7 +81,7 @@ void Gemm(Orientation orientA, Orientation orientB,
 namespace
 {
 template <typename T>
-static void Gemm_impl(
+void Gemm_impl(
     Orientation orientA, Orientation orientB,
     T alpha,
     Matrix<T,Device::CPU> const& A, Matrix<T,Device::CPU> const& B,
@@ -82,7 +103,7 @@ static void Gemm_impl(
 
 #ifdef HYDROGEN_HAVE_CUDA
 template <typename T>
-static void Gemm_impl(
+void Gemm_impl(
     Orientation orientA, Orientation orientB,
     T alpha,
     Matrix<T,Device::GPU> const& A, Matrix<T,Device::GPU> const& B,
