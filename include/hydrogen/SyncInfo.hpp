@@ -93,8 +93,8 @@ inline void AddSynchronizationPoint(
     SyncInfo<Device::GPU> const& A,
     SyncInfo<Device::GPU> const& B, SyncInfo<Device::GPU> const& C)
 {
-    bool const ABdiff = (A.stream_ == B.stream_);
-    bool const ACdiff = (A.stream_ == C.stream_);
+    bool const ABdiff = (A.stream_ != B.stream_);
+    bool const ACdiff = (A.stream_ != C.stream_);
 
     if (ABdiff || ACdiff)
         AddSynchronizationPoint(A);
