@@ -267,6 +267,7 @@ void Memory<G,D>::ResetSyncInfo(SyncInfo<D> const& syncInfo)
     // could reallocate memory. See SetMode() below.
     if ((size_ > 0) && (D == Device::GPU) && (mode_ == 1))
     {
+        return;
         LogicError("Cannot assign new SyncInfo object to "
                    "already-allocated CUB memory.");
     }

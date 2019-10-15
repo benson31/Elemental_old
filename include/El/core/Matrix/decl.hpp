@@ -473,6 +473,10 @@ public:
     void SetStream(cudaStream_t stream) EL_NO_EXCEPT;
     void SetEvent(cudaEvent_t event) EL_NO_EXCEPT;
 
+    void UpdateMemSyncInfo() EL_NO_EXCEPT
+    {
+        memory_.ResetSyncInfo(SyncInfoFromMatrix(*this));
+    }
     ///@}
 
 private:
@@ -526,6 +530,7 @@ void SetSyncInfo(
         mat.SetStream(syncInfo.stream_);
     if (syncInfo.event_ != nullptr)
         mat.SetEvent(syncInfo.event_);
+    mat.UpdateMemSyncInfo();
 }
 #endif // HYDROGEN_HAVE_CUDA
 

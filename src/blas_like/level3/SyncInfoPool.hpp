@@ -71,7 +71,7 @@ public:
 
     void Reset() const noexcept
     {
-        pos_ = std::cbegin(pool_);
+        pos_ = pool_.cbegin();
     }
 
     ///@}
@@ -86,8 +86,8 @@ public:
                 "SyncInfoPool: Cannot call Next() on empty pool.");
 
         // Handle circular condition
-        if ((++pos_) == std::cend(pool_))
-            pos_ = std::cbegin(pool_);
+        if ((++pos_) == pool_.cend())
+            pos_ = pool_.cbegin();
 
         return *pos_;
     }
@@ -156,7 +156,7 @@ void SyncInfoPool<Device::GPU>::EnsureSize(size_t pool_size)
 
     // Take care for reallocation:
     auto const initial_offset =
-        Size() == 0UL ? 0UL : std::distance(std::cbegin(pool_), pos_);
+        Size() == 0UL ? 0UL : std::distance(pool_.cbegin(), pos_);
 
     pool_.reserve(pool_size);
     size_t new_elements = pool_size - this->Size();
@@ -174,7 +174,7 @@ void SyncInfoPool<Device::GPU>::EnsureSize(size_t pool_size)
     }
 
     // Handle iterators:
-    pos_ = std::cbegin(pool_) + initial_offset;
+    pos_ = pool_.cbegin() + initial_offset;
 }
 
 }// namespace hydrogen

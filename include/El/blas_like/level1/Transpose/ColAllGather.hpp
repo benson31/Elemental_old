@@ -28,6 +28,11 @@ void ColAllGather
     ( A.ConstructTranspose(A.Grid(),A.Root()) );
     ATrans->AlignWith( A );
     ATrans->Resize( A.Width(), A.Height() );
+    // {
+    //     auto size = ATrans->LDim() * ATrans->LocalWidth();
+    //     std::cout << "ATrans=[" << ATrans->LockedBuffer() << ","
+    //               << ATrans->LockedBuffer() + size << ")" << std::endl;
+    // }
     Transpose( A.LockedMatrix(), ATrans->Matrix(), conjugate );
     Copy( *ATrans, B );
 }

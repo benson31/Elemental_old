@@ -97,14 +97,15 @@ void TestGemm
     C.Align(colAlignC, rowAlignC);
 
     if (orientA == NORMAL)
-        Uniform(A, m, k, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
+        Gaussian(A, m, k);
     else
-        Uniform(A, k, m, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
+        Gaussian(A, k, m);
     if (orientB == NORMAL)
-        Uniform(B, k, n, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
+        Gaussian(B, k, n);
     else
-        Uniform(B, n, k, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
-    Uniform(COrig, m, n, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
+        Gaussian(B, n, k);
+    Gaussian(COrig, m, n);
+    cudaDeviceSynchronize();
     if (print)
     {
         Print(A, "A");
@@ -186,7 +187,7 @@ void TestGemm
     }
 
     // Test the variant of Gemm that keeps C stationary
-    for (int ii = 0; ii < 10; ++ii)
+    for (int ii = 0; ii < 11; ++ii)
     {
         C = COrig;
         OutputFromRoot(g.Comm(),"Stationary C Algorithm:");
