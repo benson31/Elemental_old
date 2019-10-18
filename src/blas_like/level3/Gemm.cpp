@@ -200,6 +200,13 @@ void Gemm
   GemmAlgorithm alg)
 {
     EL_DEBUG_CSE;
+
+    OutputFromRoot(mpi::COMM_WORLD,
+                   "Gemm", OrientationToChar(orientA), OrientationToChar(orientB), "\n",
+                   "  A=", A.Height(), "x", A.Width(), " (", A.LDim(), ")\n",
+                   "  B=", B.Height(), "x", B.Width(), " (", B.LDim(), ")\n",
+                   "  C=", C.Height(), "x", C.Width(), " (", C.LDim(), ")\n");
+
     Scale(beta, C);
     if(orientA == NORMAL && orientB == NORMAL)
     {

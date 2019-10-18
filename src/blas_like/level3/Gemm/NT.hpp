@@ -386,13 +386,25 @@ void SUMMA_NT
     {
     case GEMM_DEFAULT:
         if(weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
+        {
+            OutputFromRoot(mpi::COMM_WORLD, "    SUMMA_NT_Dot\n");
             SUMMA_NTDot(orientB, alpha, A, B, C, blockSizeDot);
+        }
         else if(m <= n && weightTowardsC*m <= sumDim)
+        {
+            OutputFromRoot(mpi::COMM_WORLD, "    SUMMA_NT_B\n");
             SUMMA_NTB(orientB, alpha, A, B, C);
+        }
         else if(n <= m && weightTowardsC*n <= sumDim)
+        {
+            OutputFromRoot(mpi::COMM_WORLD, "    SUMMA_NT_A\n");
             SUMMA_NTA(orientB, alpha, A, B, C);
+        }
         else
+        {
+            OutputFromRoot(mpi::COMM_WORLD, "    SUMMA_NT_C\n");
             SUMMA_NTC(orientB, alpha, A, B, C);
+        }
         break;
     case GEMM_SUMMA_A: SUMMA_NTA(orientB, alpha, A, B, C); break;
     case GEMM_SUMMA_B: SUMMA_NTB(orientB, alpha, A, B, C); break;

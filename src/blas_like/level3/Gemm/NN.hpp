@@ -472,14 +472,24 @@ void SUMMA_NN
         {
             // FIXME (trb 03/27/18): There's a correctness issue with
             // this method. This exception is for your own safety.
+            OutputFromRoot(mpi::COMM_WORLD, "    SUMMA_NN_Dot\n");
             SUMMA_NNDot(alpha, A, B, C, blockSizeDot);
         }
         else if (m <= n && weightTowardsC*m <= sumDim)
+        {
+            OutputFromRoot(mpi::COMM_WORLD, "    SUMMA_NN_B\n");
             SUMMA_NNB(alpha, A, B, C);
+        }
         else if (n <= m && weightTowardsC*n <= sumDim)
+        {
+            OutputFromRoot(mpi::COMM_WORLD, "    SUMMA_NN_A\n");
             SUMMA_NNA(alpha, A, B, C);
+        }
         else
+        {
+            OutputFromRoot(mpi::COMM_WORLD, "    SUMMA_NN_C\n");
             SUMMA_NNC(alpha, A, B, C);
+        }
         break;
     case GEMM_SUMMA_A:   SUMMA_NNA(alpha, A, B, C); break;
     case GEMM_SUMMA_B:   SUMMA_NNB(alpha, A, B, C); break;
