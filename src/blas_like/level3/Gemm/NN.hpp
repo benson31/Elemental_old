@@ -389,8 +389,7 @@ void SUMMA_NNC
         break;
 #ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
-        SUMMA_NNC_impl_multistream(alpha, APre, BPre, CPre);
-//        SUMMA_NNC_impl<Device::GPU>(alpha, APre, BPre, CPre);
+        SUMMA_NNC_impl<Device::GPU>(alpha, APre, BPre, CPre);
         break;
 #endif // HYDROGEN_HAVE_GPU
     default:

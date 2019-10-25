@@ -148,7 +148,7 @@ ExperimentResult TestGemm(
     OutputFromRoot(g.Comm(), "M=", m, " N=", n, " K=", k, " NB=", block_size);
     flush(std::cout);
 
-    constexpr size_t num_warmup_runs = 2UL;
+    constexpr size_t num_warmup_runs = 5UL;
     constexpr size_t num_timed_runs = 10UL;
 
     SetBlocksize(block_size);

@@ -7,6 +7,8 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 
+#include "TN_Multistream.hpp"
+
 namespace El {
 namespace gemm {
 
@@ -93,6 +95,32 @@ void SUMMA_TNA
     }
 }
 
+template<typename T>
+void SUMMA_TNA_MS(
+    Orientation orientA,
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        Output("WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_TNA_impl<Device::CPU>(orientA, alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_CUDA
+    case Device::GPU:
+        SUMMA_TNA_impl_multistream(orientA, alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_CUDA
+    default:
+        LogicError("SUMMA_TNA_MS: Bad device.");
+    }
+}
+
 // Transpose Normal Gemm that avoids communicating the matrix B
 template <Device D, typename T, typename=EnableIf<IsDeviceValidType<T,D>>>
 void SUMMA_TNB_impl
@@ -173,6 +201,32 @@ void SUMMA_TNB
     }
 }
 
+template<typename T>
+void SUMMA_TNB_MS(
+    Orientation orientA,
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        Output("WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_TNB_impl<Device::CPU>(orientA, alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_CUDA
+    case Device::GPU:
+        SUMMA_TNB_impl_multistream(orientA, alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_CUDA
+    default:
+        LogicError("SUMMA_TNB_MS: Bad device.");
+    }
+}
+
 // Transpose Normal Gemm that avoids communicating the matrix C
 template <Device D, typename T, typename=EnableIf<IsDeviceValidType<T,D>>>
 void SUMMA_TNC_impl
@@ -250,6 +304,32 @@ void SUMMA_TNC
 #endif // HYDROGEN_HAVE_CUDA
     default:
         LogicError("SUMMA_TNA: Bad device.");
+    }
+}
+
+template<typename T>
+void SUMMA_TNC_MS(
+    Orientation orientA,
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        Output("WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_TNC_impl<Device::CPU>(orientA, alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_CUDA
+    case Device::GPU:
+        SUMMA_TNC_impl_multistream(orientA, alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_CUDA
+    default:
+        LogicError("SUMMA_TNC_MS: Bad device.");
     }
 }
 
@@ -391,10 +471,13 @@ void SUMMA_TN
         else
             SUMMA_TNC(orientA, alpha, A, B, C);
         break;
-    case GEMM_SUMMA_A: SUMMA_TNA(orientA, alpha, A, B, C); break;
-    case GEMM_SUMMA_B: SUMMA_TNB(orientA, alpha, A, B, C); break;
-    case GEMM_SUMMA_C: SUMMA_TNC(orientA, alpha, A, B, C); break;
-    case GEMM_SUMMA_DOT: SUMMA_TNDot(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_A_MS: SUMMA_TNA_MS(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_A:    SUMMA_TNA(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_B_MS: SUMMA_TNB_MS(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_B:    SUMMA_TNB(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_C_MS: SUMMA_TNC_MS(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_C:    SUMMA_TNC(orientA, alpha, A, B, C); break;
+    case GEMM_SUMMA_DOT:  SUMMA_TNDot(orientA, alpha, A, B, C); break;
     default: LogicError("Unsupported Gemm option");
     }
 }
