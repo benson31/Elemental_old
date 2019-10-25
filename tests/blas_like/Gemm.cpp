@@ -122,7 +122,7 @@ void TestGemm
 #endif
 
     // Test the variant of Gemm that keeps A stationary
-    for (int ii = 0; ii < 0; ++ii)
+    for (int ii = 0; ii < 6; ++ii)
     {
         C = COrig;
         OutputFromRoot(g.Comm(),"Stationary A algorithm:");
@@ -130,7 +130,7 @@ void TestGemm
         mpi::Barrier(g.Comm());
         timer.Start();
         START_CUDA_TIMER;
-        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_A);
+        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_A_MS);
         STOP_CUDA_TIMER;
 
         mpi::Barrier(g.Comm());
@@ -154,7 +154,7 @@ void TestGemm
     }
 
     // Test the variant of Gemm that keeps B stationary
-    for (int ii = 0; ii < 0; ++ii)
+    for (int ii = 0; ii < 6; ++ii)
     {
         C = COrig;
         OutputFromRoot(g.Comm(),"Stationary B Algorithm:");
@@ -163,7 +163,7 @@ void TestGemm
         timer.Start();
         Synchronize(SyncInfoFromMatrix(C.Matrix()));
         START_CUDA_TIMER;
-        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_B);
+        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_B_MS);
         Synchronize(SyncInfoFromMatrix(C.Matrix()));
         STOP_CUDA_TIMER;
 
@@ -187,7 +187,7 @@ void TestGemm
     }
 
     // Test the variant of Gemm that keeps C stationary
-    for (int ii = 0; ii < 11; ++ii)
+    for (int ii = 0; ii < 6; ++ii)
     {
         C = COrig;
         OutputFromRoot(g.Comm(),"Stationary C Algorithm:");
@@ -195,7 +195,7 @@ void TestGemm
         mpi::Barrier(g.Comm());
         timer.Start();
         START_CUDA_TIMER;
-        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_C);
+        Gemm(orientA, orientB, alpha, A, B, beta, C, GEMM_SUMMA_C_MS);
         STOP_CUDA_TIMER;
 
         mpi::Barrier(g.Comm());

@@ -92,6 +92,12 @@ public:
         return *pos_;
     }
 
+    // auto begin() const { return pool_.begin(); }
+    // auto end() const { return pool_.end(); }
+
+    // auto cbegin() const { return pool_.cbegin(); }
+    // auto cend() const { return pool_.cend(); }
+
     ///@}
 
 private:

@@ -10,6 +10,8 @@
 #include <El/matrices.hpp>
 #include <El/io.hpp>
 
+#include "NN_Multistream.hpp"
+
 namespace El {
 namespace gemm {
 
@@ -159,18 +161,8 @@ void SUMMA_NNA_impl(T alpha,
     LogicError("SUMMA_NNA_impl type-device combo not supported.");
 }
 
-template <typename T,
-          typename=DisableIf<IsDeviceValidType<T,Device::GPU>>, typename=void>
-void SUMMA_NNA_impl_multistream(T alpha,
-               AbstractDistMatrix<T> const& APre,
-               AbstractDistMatrix<T> const& BPre,
-               AbstractDistMatrix<T>& CPre)
-{
-    LogicError("SUMMA_NNA_impl_multistream type-device combo not supported.");
-}
-
-template <typename T, typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
-void SUMMA_NNA_impl_multistream(
+template <typename T>
+void SUMMA_NNA(
     T alpha,
     AbstractDistMatrix<T> const& APre,
     AbstractDistMatrix<T> const& BPre,
@@ -178,77 +170,41 @@ void SUMMA_NNA_impl_multistream(
 {
     EL_DEBUG_CSE;
 
-    constexpr auto D = Device::GPU;
-
-    AUTO_PROFILE_REGION(
-        "SUMMA.NNA.multistream",
-        SyncInfoFromMatrix(
-            static_cast<Matrix<T,D> const&>(CPre.LockedMatrix())));
-
-    const Int n = CPre.Width();
-    const Int bsize = Blocksize();
-    const Grid& g = APre.Grid();
-    auto const num_blocks = (sumDim + bsize - 1) / bsize;
-
-    // Setup proxies to assert data layout
-    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> AProx(APre);
-    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> BProx(BPre);
-    DistMatrixReadWriteProxy<T,T,MC,MR,ELEMENT,D> CProx(CPre);
-    auto& A = AProx.GetLocked();
-    auto& B = BProx.GetLocked();
-    auto& C = CProx.Get();
-
-    // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
-    auto const num_stream_teams =
-        stream_pool.Size() == 1UL
-        ? 1UL
-        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
-
-    // Temporary distributions
-    DistMatrix<T,VR,STAR,ELEMENT,D> B1_VR_STAR(g);
-    DistMatrix<T,STAR,MR,ELEMENT,D> B1Trans_STAR_MR(g);
-    DistMatrix<T,MC,STAR,ELEMENT,D> D1_MC_STAR(g);
-
-    B1_VR_STAR.AlignWith(A);
-    B1Trans_STAR_MR.AlignWith(A);
-    D1_MC_STAR.AlignWith(A);
-
-    for(Int k=0; k<n; k+=bsize)
-    {
-        const Int nb = Min(bsize,n-k);
-        auto B1 = B(ALL, IR(k,k+nb));
-        auto C1 = C(ALL, IR(k,k+nb));
-
-        // D1[MC,*] := alpha A[MC,MR] B1[MR,*]
-        B1_VR_STAR = B1;
-        Transpose(B1_VR_STAR, B1Trans_STAR_MR);
-        LocalGemm(NORMAL, TRANSPOSE, alpha, A, B1Trans_STAR_MR, D1_MC_STAR);
-
-        // C1[MC,MR] += scattered result of D1[MC,*] summed over grid rows
-        AxpyContract(TypeTraits<T>::One(), D1_MC_STAR, C1);
-    }
-}
-
-template <typename T>
-void SUMMA_NNA
-(T alpha,
- AbstractDistMatrix<T> const& APre,
- AbstractDistMatrix<T> const& BPre,
- AbstractDistMatrix<T>& CPre)
-{
-    EL_DEBUG_CSE
-
     switch (CPre.GetLocalDevice())
     {
     case Device::CPU:
         SUMMA_NNA_impl<Device::CPU>(alpha, APre, BPre, CPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NNA_impl<Device::GPU>(alpha, APre, BPre, CPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("SUMMA_NNA: Bad device.");
+    }
+}
+
+template <typename T>
+void SUMMA_NNA_MS(
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        Output("WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_NNA_impl<Device::CPU>(alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        SUMMA_NNA_impl_multistream(alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NNA: Bad device.");
     }
@@ -325,11 +281,36 @@ void SUMMA_NNB
     case Device::CPU:
         SUMMA_NNB_impl<Device::CPU>(alpha, APre, BPre, CPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NNB_impl<Device::GPU>(alpha, APre, BPre, CPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("SUMMA_NNB: Bad device.");
+    }
+}
+
+template <typename T>
+void SUMMA_NNB_MS(
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        Output("WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_NNB_impl<Device::CPU>(alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        SUMMA_NNB_impl_multistream(alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NNB: Bad device.");
     }
@@ -392,155 +373,6 @@ void SUMMA_NNC_impl(T alpha,
     LogicError("SUMMA_NNC_impl type-device combo not supported.");
 }
 
-template <typename T,
-          typename=DisableIf<IsDeviceValidType<T,Device::GPU>>, typename=void>
-void SUMMA_NNC_impl_multistream(T alpha,
-               AbstractDistMatrix<T> const& APre,
-               AbstractDistMatrix<T> const& BPre,
-               AbstractDistMatrix<T>& CPre)
-{
-    LogicError("SUMMA_NNC_impl_multistream type-device combo not supported.");
-}
-
-template <typename T, typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
-void SUMMA_NNC_impl_multistream(
-    T alpha,
-    AbstractDistMatrix<T> const& APre,
-    AbstractDistMatrix<T> const& BPre,
-    AbstractDistMatrix<T>& CPre)
-{
-    EL_DEBUG_CSE;
-
-    constexpr auto D = Device::GPU;
-
-    AUTO_PROFILE_REGION(
-        "SUMMA.NNC.multistream",
-        SyncInfoFromMatrix(
-            static_cast<Matrix<T,D> const&>(CPre.LockedMatrix())));
-
-    const Int sumDim = APre.Width();
-    const Int bsize = Blocksize();
-    const Grid& g = APre.Grid();
-    auto const num_blocks = (sumDim + bsize - 1) / bsize;
-
-    // Setup proxies to assert data layout
-    // (TRB 10/09/2019): Is this really necessary?
-    //   --> For C yes, for A and B, probably not. But having it
-    //       guarantees the description "allgather-allgather-compute".
-    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> AProx(APre);
-    DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> BProx(BPre);
-    DistMatrixReadWriteProxy<T,T,MC,MR,ELEMENT,D> CProx(CPre);
-    auto& A = AProx.GetLocked();
-    auto& B = BProx.GetLocked();
-    auto& C = CProx.Get();
-
-    // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
-    auto const num_stream_teams =
-        stream_pool.Size() == 1UL
-        ? 1UL
-        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
-
-    // Setup the temporary matrices. One of each per "stream team".
-    std::vector<DistMatrix<T,MC,STAR,ELEMENT,D>> A1_MC_STAR;
-    std::vector<DistMatrix<T,MR,STAR,ELEMENT,D>> B1Trans_MR_STAR;
-    std::vector<DistMatrix<T,MC,MR,ELEMENT,D>> C_TMP;
-
-    A1_MC_STAR.reserve(num_stream_teams);
-    B1Trans_MR_STAR.reserve(num_stream_teams);
-    C_TMP.reserve(num_stream_teams);
-
-    // Basic setup functions for the temp matrices; also, assign data
-    // to streams in a round-robin fashion.
-    for (auto id = 0UL; id < num_stream_teams; ++id)
-    {
-        auto A1 = A1_MC_STAR.emplace(A1_MC_STAR.end(), A.Height(), bsize, g);
-        auto B1 = B1Trans_MR_STAR.emplace(
-            B1Trans_MR_STAR.end(), B.Width(), bsize, g);
-        auto C1 = C_TMP.emplace(C_TMP.end(), C.Height(), C.Width(), g);
-
-        auto const& stream_one = stream_pool.Next();
-        auto const& stream_two = stream_pool.Next();
-
-        // A and B are logically const; these just need to have the
-        // right alignment and "stream affinity".
-        A1->AlignWith(C);
-        B1->AlignWith(C);
-        SetSyncInfo(A1->Matrix(), stream_one);
-        SetSyncInfo(B1->Matrix(), stream_two);
-
-        // The copies of C should be initialized to zero so the
-        // accumulation is correct.
-        if (id == 0UL)
-        {
-            View(*C1, C);
-            SetSyncInfo(C1->Matrix(), stream_two);//SyncInfoFromMatrix(C.Matrix()));
-        }
-        else
-        {
-            C1->AlignWith(C);
-            SetSyncInfo(C1->Matrix(), stream_two);
-
-            // Zero things out.
-            Zero(*C1);
-        }
-    }
-
-    // From this point on, we don't use the stream pool explicitly;
-    // matrices are directly queried for their stream
-    // information. This seemed less prone to error.
-
-    // Compute the rank-k updates. This is Allgather-Allgather, Compute.
-    size_t team_id = 0;
-    for (Int k = 0; k < sumDim; k += bsize)
-    {
-        // Ultimately, these are "locked views" of ranges of
-        // columns/rows of A/B, resp.
-        DistMatrix<T,MC,MR,ELEMENT,D> A1(g), B1(g);
-        Int const nb = Min(bsize, sumDim-k);
-
-        auto& AMCSTAR = A1_MC_STAR[team_id];
-        auto& BTMRSTAR = B1Trans_MR_STAR[team_id];
-
-        // Set the streams for the views so operations with them are
-        // correctly synchronized and ordered.
-        auto const& stream_one =
-            SyncInfoFromMatrix(AMCSTAR.Matrix());
-        auto const& stream_two =
-            SyncInfoFromMatrix(BTMRSTAR.Matrix());
-
-        SetSyncInfo(A1.Matrix(), stream_one);
-        SetSyncInfo(B1.Matrix(), stream_two);
-
-        // Select the block of columns/rows of A/B.
-        A1 = A(ALL,        IR(k,k+nb));
-        B1 = B(IR(k,k+nb), ALL       );
-
-        // Perform data movement (allgathers).
-        AMCSTAR = A1;
-        Transpose(B1, BTMRSTAR);
-
-        // Compute the local portion of the rank-k update. This is
-        // stored in the "team-local" storage. This assures no data
-        // race in updates to C (since C isn't being updated yet).
-        LocalGemm(NORMAL, TRANSPOSE,
-                  alpha,
-                  AMCSTAR,
-                  BTMRSTAR,
-                  TypeTraits<T>::One(), C_TMP[team_id]);
-
-        // Bookkeeping.
-        team_id = (team_id + 1) % num_stream_teams;
-    }
-
-    // Compute the reduction into the "real C". This work will
-    // serialize on C's stream, so there is no race here.
-    for (size_t ii = 1; ii < C_TMP.size(); ++ii)
-    {
-        Axpy(TypeTraits<T>::One(), C_TMP[ii], C);
-    }
-}
-
 template<typename T>
 void SUMMA_NNC
 (T alpha,
@@ -555,16 +387,41 @@ void SUMMA_NNC
     case Device::CPU:
         SUMMA_NNC_impl<Device::CPU>(alpha, APre, BPre, CPre);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NNC_impl_multistream(alpha, APre, BPre, CPre);
 //        SUMMA_NNC_impl<Device::GPU>(alpha, APre, BPre, CPre);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NNC: Bad device.");
     }
 
+}
+
+template <typename T>
+void SUMMA_NNC_MS(
+    T alpha,
+    AbstractDistMatrix<T> const& APre,
+    AbstractDistMatrix<T> const& BPre,
+    AbstractDistMatrix<T>& CPre)
+{
+    EL_DEBUG_CSE;
+
+    switch (CPre.GetLocalDevice())
+    {
+    case Device::CPU:
+        Output("WARNING: CPU doesn't support \"multistream\" variants.");
+        SUMMA_NNC_impl<Device::CPU>(alpha, APre, BPre, CPre);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        SUMMA_NNC_impl_multistream(alpha, APre, BPre, CPre);
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("SUMMA_NNC: Bad device.");
+    }
 }
 
 // Normal Normal Gemm for panel-panel dot products
@@ -651,25 +508,25 @@ void SUMMA_NNDot
     case Device::CPU:
         SUMMA_NNDot_impl<Device::CPU>(alpha, APre, BPre, CPre, blockSize);
         break;
-#ifdef HYDROGEN_HAVE_CUDA
+#ifdef HYDROGEN_HAVE_GPU
     case Device::GPU:
         SUMMA_NNDot_impl<Device::GPU>(alpha, APre, BPre, CPre, blockSize);
         break;
-#endif // HYDROGEN_HAVE_CUDA
+#endif // HYDROGEN_HAVE_GPU
     default:
         LogicError("SUMMA_NNDot: Bad device.");
     }
 }
 
 template<typename T>
-void SUMMA_NN
-(T alpha,
-  const AbstractDistMatrix<T>& A,
-  const AbstractDistMatrix<T>& B,
-        AbstractDistMatrix<T>& C,
-  GemmAlgorithm alg=GEMM_DEFAULT)
+void SUMMA_NN(
+    T alpha,
+    AbstractDistMatrix<T> const& A,
+    AbstractDistMatrix<T> const& B,
+    AbstractDistMatrix<T>& C,
+    GemmAlgorithm alg=GEMM_DEFAULT)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     EL_DEBUG_ONLY(
       AssertSameGrids(A, B, C);
       if (A.Height() != C.Height() ||
@@ -695,11 +552,7 @@ void SUMMA_NN
     {
     case GEMM_DEFAULT:
         if (weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
-        {
-            // FIXME (trb 03/27/18): There's a correctness issue with
-            // this method. This exception is for your own safety.
             SUMMA_NNDot(alpha, A, B, C, blockSizeDot);
-        }
         else if (m <= n && weightTowardsC*m <= sumDim)
             SUMMA_NNB(alpha, A, B, C);
         else if (n <= m && weightTowardsC*n <= sumDim)
@@ -707,10 +560,13 @@ void SUMMA_NN
         else
             SUMMA_NNC(alpha, A, B, C);
         break;
-    case GEMM_SUMMA_A:   SUMMA_NNA(alpha, A, B, C); break;
-    case GEMM_SUMMA_B:   SUMMA_NNB(alpha, A, B, C); break;
-    case GEMM_SUMMA_C:   SUMMA_NNC(alpha, A, B, C); break;
-    case GEMM_SUMMA_DOT: SUMMA_NNDot(alpha, A, B, C, blockSizeDot); break;
+    case GEMM_SUMMA_A_MS: SUMMA_NNA_MS(alpha, A, B, C); break;
+    case GEMM_SUMMA_A:    SUMMA_NNA(alpha, A, B, C); break;
+    case GEMM_SUMMA_B_MS: SUMMA_NNB_MS(alpha, A, B, C); break;
+    case GEMM_SUMMA_B:    SUMMA_NNB(alpha, A, B, C); break;
+    case GEMM_SUMMA_C_MS: SUMMA_NNC_MS(alpha, A, B, C); break;
+    case GEMM_SUMMA_C:    SUMMA_NNC(alpha, A, B, C); break;
+    case GEMM_SUMMA_DOT:  SUMMA_NNDot(alpha, A, B, C, blockSizeDot); break;
     default: LogicError("Unsupported Gemm option");
     }
 }

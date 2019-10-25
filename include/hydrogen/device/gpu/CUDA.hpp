@@ -49,7 +49,7 @@ struct CudaError : std::runtime_error
             status_CUDA_SYNC = cudaGetLastError();                      \
         if (status_CUDA_SYNC != cudaSuccess) {                          \
             cudaDeviceReset();                                          \
-            throw CudaError(status_CUDA_SYNC,__FILE__,__LINE__,async);  \
+            throw hydrogen::CudaError(status_CUDA_SYNC,__FILE__,__LINE__,async);  \
         }                                                               \
     }                                                                   \
     while( 0 )
@@ -62,7 +62,7 @@ struct CudaError : std::runtime_error
         cudaError_t status_CHECK_CUDA = cuda_call ;                     \
         if( status_CHECK_CUDA != cudaSuccess ) {                        \
             cudaDeviceReset();                                          \
-            throw CudaError(status_CHECK_CUDA,__FILE__,__LINE__,false); \
+            throw hydrogen::CudaError(status_CHECK_CUDA,__FILE__,__LINE__,false); \
         }                                                               \
         H_CUDA_SYNC(false);                                            \
     } while (0)
@@ -74,7 +74,7 @@ struct CudaError : std::runtime_error
         cudaError_t status_CHECK_CUDA = cuda_call ;                     \
         if( status_CHECK_CUDA != cudaSuccess ) {                        \
             cudaDeviceReset();                                          \
-            throw CudaError(status_CHECK_CUDA,__FILE__,__LINE__,false); \
+            throw hydrogen::CudaError(status_CHECK_CUDA,__FILE__,__LINE__,false); \
         }                                                               \
     } while (0)
 #define H_LAUNCH_CUDA_KERNEL(kernel, Dg, Db, Ns, S, args)      \
