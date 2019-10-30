@@ -21,6 +21,8 @@ portion of TestGemm.
 #include <regex>
 #include <vector>
 
+#include <cuda_profiler_api.h>
+
 using namespace El;
 
 #ifdef HYDROGEN_HAVE_CUDA
@@ -126,6 +128,7 @@ void TestAssociativity(
         g.Comm(), "|| E ||_F / || Y ||_F = ",
         EFrobNorm, "/", YFrobNorm, " = ", EFrobNorm/YFrobNorm);
     PopIndent();
+    flush(std::cout);
 }
 
 // Returns the result from a single experiment, which is a vector of
@@ -149,7 +152,7 @@ ExperimentResult TestGemm(
     flush(std::cout);
 
     constexpr size_t num_warmup_runs = 5UL;
-    constexpr size_t num_timed_runs = 10UL;
+    constexpr size_t num_timed_runs = 12UL;
 
     SetBlocksize(block_size);
 
@@ -215,13 +218,24 @@ ExperimentResult TestGemm(
     long double mean = 0.f, stddev = 0.f;
     std::vector<long double> times;
     times.reserve(timers.size());
+    size_t count = 0;
+    size_t const skip = 2;
     for (auto const& t : timers)
     {
-        times.push_back(t.GetTime());
-        mean += times.back();
+        if (count < skip)
+        {
+            volatile auto x = t.GetTime();
+            (void) x;
+            ++count;
+        }
+        else
+        {
+            times.push_back(t.GetTime());
+            mean += times.back();
+        }
     }
 
-    mean = mean / static_cast<long double>(timers.size());
+    mean = mean / static_cast<long double>(times.size());
     for (auto const& t : times)
         stddev += (t - mean) * (t - mean) / (times.size() - 1);
     stddev = std::sqrt(stddev);
@@ -234,6 +248,7 @@ ExperimentResult TestGemm(
     OutputFromRoot(g.Comm(), "Mean: ", mean, "s, StdDev: ", stddev);
     PopIndent();
     OutputFromRoot(g.Comm(), "Finshed.\n");
+    flush(std::cout);
 
     return times;
 }
@@ -269,13 +284,23 @@ int main(int argc, char* argv[])
 
     ExperimentSuite suite = ParseExperimentFile(input_file, comm);
 
+    H_CHECK_CUDA(cudaProfilerStart());
+
     ExperimentResults results = RunExperiments(suite, g);
+
+    H_CHECK_CUDA(cudaProfilerStop());
 
     mpi::Barrier(comm);
 #ifdef HYDROGEN_HAVE_CUDA
     H_CHECK_CUDA(cudaDeviceSynchronize());
 #endif // HYDROGEN_HAVE_CUDA
+
     OutputResults(suite, results, output_file, comm);
+
+    mpi::Barrier(comm);
+#ifdef HYDROGEN_HAVE_CUDA
+    H_CHECK_CUDA(cudaDeviceSynchronize());
+#endif // HYDROGEN_HAVE_CUDA
 
     return 0;
 }
