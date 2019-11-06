@@ -23,10 +23,46 @@ size_t GetDefaultSyncPoolSize()
         return 1;
 }
 
-hydrogen::SyncInfoPool<hydrogen::Device::GPU> const& GetSyncInfoPool()
+bool comms_initiated = false;
+
+hydrogen::SyncInfoPool<hydrogen::Device::GPU> const&
+GetSyncInfoPool(El::Grid const& g)
 {
     static hydrogen::SyncInfoPool<hydrogen::Device::GPU>
         pool(GetDefaultSyncPoolSize());
+
+    if (not comms_initiated)
+    {
+        using BackendOne = El::BestBackend<float,hydrogen::Device::GPU,El::Collective::ALLTOALL>;
+        using BackendTwo = El::BestBackend<float,hydrogen::Device::GPU,El::Collective::ALLGATHER>;
+
+        for (size_t ii = 0; ii < pool.Size(); ++ii)
+        {
+            auto& syncInfo = pool.Next();
+
+            g.MCComm().template GetComm<BackendOne>(syncInfo);
+            g.MCComm().template GetComm<BackendTwo>(syncInfo);
+
+            g.VCComm().template GetComm<BackendOne>(syncInfo);
+            g.VCComm().template GetComm<BackendTwo>(syncInfo);
+
+            g.MRComm().template GetComm<BackendOne>(syncInfo);
+            g.MRComm().template GetComm<BackendTwo>(syncInfo);
+
+            g.VRComm().template GetComm<BackendOne>(syncInfo);
+            g.VRComm().template GetComm<BackendTwo>(syncInfo);
+
+            g.MDComm().template GetComm<BackendOne>(syncInfo);
+            g.MDComm().template GetComm<BackendTwo>(syncInfo);
+
+            g.MDPerpComm().template GetComm<BackendOne>(syncInfo);
+            g.MDPerpComm().template GetComm<BackendTwo>(syncInfo);
+        }
+
+        H_CHECK_CUDA(cudaDeviceSynchronize());
+
+        comms_initiated = true;
+    }
     return pool;
 }
 }// namespace <anon>

@@ -50,6 +50,7 @@ DM::DistMatrix(const DM& A)
     : EM(A.Grid())
 {
     EL_DEBUG_CSE
+    SetSyncInfo(this->Matrix(), SyncInfoFromMatrix(A.LockedMatrix()));
     if (COLDIST != CIRC || ROWDIST != CIRC)
         this->Matrix().FixSize();
     this->SetShifts();

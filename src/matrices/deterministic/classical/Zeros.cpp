@@ -70,7 +70,7 @@ void Zeros( AbstractDistMatrix<T>& A, Int m, Int n )
   template void Zeros( AbstractDistMatrix<T>& A, Int m, Int n );
 
 #ifdef HYDROGEN_GPU_USE_FP16
-PROTO(gpu_half_type);
+PROTO(gpu_half_type)
 #endif // HYDROGEN_GPU_USE_FP16
 
 #define EL_ENABLE_DOUBLEDOUBLE

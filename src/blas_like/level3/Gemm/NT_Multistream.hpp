@@ -34,7 +34,7 @@ void SUMMA_NTA_impl_multistream(
     auto& C = CProx.Get();
 
     // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
+    auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL
@@ -144,7 +144,7 @@ void SUMMA_NTB_impl_multistream(
     auto& C = CProx.Get();
 
     // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
+    auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL
@@ -176,7 +176,7 @@ void SUMMA_NTB_impl_multistream(
         D1.AlignWith(B);
 
         SetSyncInfo(A1.Matrix(), stream_one);
-        SetSyncInfo(D1.Matrix(), stream_two);
+        SetSyncInfo(D1.Matrix(), stream_one);
         SetSyncInfo(DMRMC.Matrix(), stream_two);
     }
 
@@ -268,7 +268,7 @@ void SUMMA_NTC_impl_multistream(
     std::vector<DistMatrix<T,MC,MR,ELEMENT,D>> C_TMP;
 
         // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
+    auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL

@@ -32,7 +32,7 @@ void SUMMA_NNA_impl_multistream(
     auto& C = CProx.Get();
 
     // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
+    auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL
@@ -153,7 +153,7 @@ void SUMMA_NNB_impl_multistream(
     auto& C = CProx.Get();
 
     // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
+    auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL
@@ -258,7 +258,7 @@ void SUMMA_NNC_impl_multistream(
     auto& C = CProx.Get();
 
     // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
+    auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL

@@ -33,7 +33,7 @@ void SUMMA_TNA_impl_multistream(
     auto& C = CProx.Get();
 
     // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
+    auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL
@@ -143,18 +143,18 @@ void SUMMA_TNB_impl_multistream(
     const bool conjugate = (orientA == ADJOINT);
     auto const num_blocks = (m + bsize - 1) / bsize;
 
-    auto const& stream_pool = GetSyncInfoPool();
-    auto const num_stream_teams =
-        stream_pool.Size() == 1UL
-        ? 1UL
-        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
-
     DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> AProx(APre);
     DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> BProx(BPre);
     DistMatrixReadWriteProxy<T,T,MC,MR,ELEMENT,D> CProx(CPre);
     auto& A = AProx.GetLocked();
     auto& B = BProx.GetLocked();
     auto& C = CProx.Get();
+
+    auto const& stream_pool = GetSyncInfoPool(C.Grid());
+    auto const num_stream_teams =
+        stream_pool.Size() == 1UL
+        ? 1UL
+        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
 
     // Temporary distributions
     std::vector<DistMatrix<T,MC,STAR,ELEMENT,D>> A1_MC_STAR;
@@ -249,19 +249,19 @@ void SUMMA_TNC_impl_multistream(
     const Grid& g = APre.Grid();
     auto const num_blocks = (sumDim + bsize - 1) / bsize;
 
-    // Get the sync pool.
-    auto const& stream_pool = GetSyncInfoPool();
-    auto const num_stream_teams =
-        stream_pool.Size() == 1UL
-        ? 1UL
-        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
-
     DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> AProx(APre);
     DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> BProx(BPre);
     DistMatrixReadWriteProxy<T,T,MC,MR,ELEMENT,D> CProx(CPre);
     auto& A = AProx.GetLocked();
     auto& B = BProx.GetLocked();
     auto& C = CProx.Get();
+
+    // Get the sync pool.
+    auto const& stream_pool = GetSyncInfoPool(C.Grid());
+    auto const num_stream_teams =
+        stream_pool.Size() == 1UL
+        ? 1UL
+        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
 
     // Temporary distributions
     std::vector<DistMatrix<T,STAR,MC,ELEMENT,D>> A1_STAR_MC;
@@ -337,15 +337,15 @@ void SUMMA_TNC_impl_multistream(
         team_id = (team_id + 1) % num_stream_teams;
     }
 
-    AddSynchronizationPoint(SyncInfoFromMatrix(C_TMP.front().LockedMatrix()),
-                            SyncInfoFromMatrix(C.LockedMatrix()));
-
     // Compute the reduction into the "real C". This work will
     // serialize on C's stream, so there is no race here.
     for (size_t ii = 1; ii < C_TMP.size(); ++ii)
     {
-        Axpy(TypeTraits<T>::One(), C_TMP[ii], C);
+        Axpy(TypeTraits<T>::One(), C_TMP[ii], C_TMP.front());
     }
+
+    AddSynchronizationPoint(SyncInfoFromMatrix(C_TMP.front().LockedMatrix()),
+                            SyncInfoFromMatrix(C.LockedMatrix()));
 }
 
 template <typename T,
