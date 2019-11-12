@@ -25,8 +25,7 @@ void IntraDomainMatch(int iter, DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& 
 
 void InterDomainMatch(int iter, DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& A, std::vector< std::vector<int> >& candidates, std::vector<int>& next, std::vector<int>& match, int &n_pair, int &n_singleton, int &n_matched);
 
-template<typename T>
-void AssignCoarseNodeIndex(DistMatrix<T,STAR,VC,ELEMENT,Device::CPU>& A, std::vector<int>& match, std::vector<int>& cnode, int &num_cnode_global);
+void AssignCoarseNodeIndex(DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& A, std::vector<int>& match, std::vector<int>& cnode, int &num_cnode_global);
 
 void CheckMatchAndCnode(DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& A, std::vector<int>& match, std::vector<int>& cnode, int num_cnode_global);
 
@@ -76,7 +75,7 @@ void DistHEM(DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& A,
 {
    Matrix<double,Device::CPU>& local_mat = A.Matrix();
 
-   int iter = 0, flag, /*np,*/ pid;
+   int iter = 0, flag, np, pid;
    int n_global = A.Height();
    int n_local = local_mat.Width();
    int n_pair = 0, n_singleton = 0, n_matched = 0;
@@ -90,7 +89,7 @@ void DistHEM(DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& A,
    std::vector< std::vector<int> > candidates(n_local);
    std::vector<int> next(n_local, 0);
 
-   const int np = A.Grid().Comm().Size();
+   np = A.Grid().Comm().Size();
    pid = A.Grid().Comm().Rank();
 
    std::vector<key_idx> pairs;
@@ -102,7 +101,7 @@ void DistHEM(DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& A,
 
       for (int j = 0; j < n_global; j++)
       {
-         const double aji = local_mat.Get(j, i);
+         double aji = local_mat.Get(j, i);
          if (A.GlobalCol(i) != j && aji > strength_tol)
          {
             key_idx x(aji, j);
@@ -112,7 +111,7 @@ void DistHEM(DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& A,
 
       sort(pairs.begin(), pairs.end(), std::greater<key_idx>());
 
-      for (auto it = pairs.cbegin(); it != pairs.cend(); ++it)
+      for (std::vector<key_idx>::iterator it = pairs.begin(); it != pairs.end(); ++it)
       {
          candidates[i].push_back(it->idx);
       }
@@ -796,13 +795,12 @@ int linearSearch(int arr[], int l, int r, int x)
    return p;
 }
 
-template<typename T>
-void AssignCoarseNodeIndex(DistMatrix<T,STAR,VC,ELEMENT,Device::CPU>& A,
+void AssignCoarseNodeIndex(DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& A,
                            std::vector<int>& match,
                            std::vector<int>& cnode,
                            int &num_cnode_global)
 {
-   Matrix<T,Device::CPU>& local_mat = A.Matrix();
+   Matrix<double,Device::CPU>& local_mat = A.Matrix();
 
    int i, j, np, pid, cnum = 0, cnum_presum = 0;
    int n_local = local_mat.Width();
@@ -1027,9 +1025,3 @@ void CheckMatchAndCnode(DistMatrix<double,STAR,VC,ELEMENT,Device::CPU>& A,
    }
 }
 
-
-/*
-   DistMatrix<double,STAR,VC,ELEMENT,Device::CPU> R(grid);
-   R.Resize(globalnumrows, globalnumcols);
-   R.SetLocal(i,j,val); // local i, j
- */
