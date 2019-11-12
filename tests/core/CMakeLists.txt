@@ -9,7 +9,6 @@ set_full_path(THIS_DIR_SOURCES
   QDToInt.cpp
   SafeDiv.cpp
   Version.cpp
-  HEM.cpp
   )
 
 # Propagate the files up the tree
