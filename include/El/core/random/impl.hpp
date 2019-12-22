@@ -109,6 +109,16 @@ T UnitCell()
     return cell;
 }
 
+#ifdef HYDROGEN_HAVE_HALF
+inline cpu_half_type SampleUniform(
+    cpu_half_type const& a, cpu_half_type const& b)
+{
+    std::mt19937& gen = Generator();
+    std::uniform_real_distribution<float> uni((float)a,(float)b);
+    return cpu_half_type{uni(gen)};
+}
+#endif // HYDROGEN_HAVE_HALF
+
 template<typename Real,typename>
 Real SampleUniformNaive( const Real& a, const Real& b )
 {
