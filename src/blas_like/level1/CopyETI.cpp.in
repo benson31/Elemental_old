@@ -1,0 +1,12 @@
+#include "El/core.hpp"
+#include "El/blas_like/level1/Copy.hpp"
+#include "El/blas_like/level1/CopyAsync.hpp"
+
+namespace El
+{
+
+#define EL_EXTERN
+
+@H_COPY_ETI@
+
+}// namespace El

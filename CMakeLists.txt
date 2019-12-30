@@ -332,7 +332,7 @@ if (Hydrogen_ENABLE_CUDA)
     endif ()
 
     find_package(CUDA REQUIRED) # Enable all the macros
-    find_package(NVML REQUIRED)
+    #find_package(NVML REQUIRED)
 
     if (Hydrogen_ENABLE_CUBLAS_TENSOR_MATH)
       set(HYDROGEN_CUBLAS_USE_TENSOR_OP_MATH TRUE)
@@ -539,6 +539,7 @@ if (HYDROGEN_HAVE_CUDA)
   target_link_libraries(Hydrogen_CUDA PUBLIC ${NVTX_LIBRARIES})
   target_link_libraries(Hydrogen_CUDA PUBLIC cuda::toolkit)
 
+  target_link_libraries(Hydrogen_CXX PUBLIC Hydrogen_CUDA)
   list(APPEND HYDROGEN_LIBRARIES Hydrogen_CUDA)
 endif ()
 

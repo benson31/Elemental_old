@@ -115,7 +115,7 @@ void Axpy_GPU_impl(
     {
         return;
     }
-    
+
     constexpr int TILE_SIZE = 32;
     constexpr int BLK_COLS = 8;
 

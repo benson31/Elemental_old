@@ -366,15 +366,26 @@ void Contract( const BlockMatrix<T>& A, BlockMatrix<T>& B );
 
 // Copy
 // ====
+class BaseDistMatrix;
 
-template<typename T>
-void Copy( const AbstractMatrix<T>& A, AbstractMatrix<T>& B );
-template<typename T>
-void Copy( const Matrix<T>& A, Matrix<T>& B );
-template<typename S,typename T,
-         typename=EnableIf<And<CanCast<S,T>,Not<IsSame<S,T>>>>>
-void Copy( const Matrix<S>& A, Matrix<T>& B );
+template <typename T, typename U>
+void Copy(AbstractMatrix<T> const& Src, AbstractMatrix<U>& Tgt);
+template <typename T, typename U, Device D1, Device D2>
+void Copy(Matrix<T, D1> const & Src, Matrix<U, D2>& Tgt);
 
+void Copy(BaseDistMatrix const& Src, BaseDistMatrix& Tgt);
+template <typename T, typename U>
+void Copy(AbstractDistMatrix<T> const& Src, AbstractDistMatrix<U> Tgt);
+template <typename T, typename U>
+void Copy(ElementalMatrix<T> const& Src, ElementalMatrix<U> Tgt);
+
+void CopyAsync(BaseDistMatrix const& Src, BaseDistMatrix& Tgt);
+template <typename T, typename U>
+void CopyAsync(AbstractDistMatrix<T> const& Src, AbstractDistMatrix<U>& Tgt);
+template <typename T, typename U>
+void CopyAsync(ElementalMatrix<T> const& Src, ElementalMatrix<U>& Tgt);
+
+#if 0
 #ifdef HYDROGEN_HAVE_CUDA
 template <typename T>
 void Copy(Matrix<T,Device::CPU> const&, Matrix<T,Device::GPU>&);
@@ -390,20 +401,23 @@ template <typename T>
 void CopyAsync(ElementalMatrix<T> const& A, ElementalMatrix<T>& B);
 template <typename T>
 void CopyAsync(AbstractDistMatrix<T> const& A, AbstractDistMatrix<T>& B);
-
-template<typename S,typename T,
-         typename=EnableIf<CanCast<S,T>>>
-void Copy( const ElementalMatrix<S>& A, ElementalMatrix<T>& B );
+#endif // 0
 
 template<typename S,typename T,
          typename=EnableIf<CanCast<S,T>>>
 void Copy( const BlockMatrix<S>& A, BlockMatrix<T>& B );
+
+#if 0
+template<typename S,typename T,
+         typename=EnableIf<CanCast<S,T>>>
+void Copy( const ElementalMatrix<S>& A, ElementalMatrix<T>& B );
 
 template<typename T>
 void Copy( const AbstractDistMatrix<T>& A, AbstractDistMatrix<T>& B );
 template<typename S,typename T,
          typename=EnableIf<And<CanCast<S,T>,Not<IsSame<S,T>>>>>
 void Copy( const AbstractDistMatrix<S>& A, AbstractDistMatrix<T>& B );
+#endif // 0
 
 template<typename T>
 void CopyFromRoot
