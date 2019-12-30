@@ -1,9 +1,9 @@
-#ifndef EL_BLAS_LIKE_LEVEL1_COPYASYNC_HPP_
-#define EL_BLAS_LIKE_LEVEL1_COPYASYNC_HPP_
+#ifndef EL_BLAS_LIKE_LEVEL1_COPYASYNCLOCAL_HPP_
+#define EL_BLAS_LIKE_LEVEL1_COPYASYNCLOCAL_HPP_
 
 #include <hydrogen/Device.hpp>
 
-#include "CopyFunctionsThatDoStuff.hpp"
+#include "CopyLocal.hpp"
 
 namespace El
 {
@@ -111,4 +111,4 @@ void CopyAsync(Matrix<T, D1> const& src, Matrix<U, D2>& tgt)
 }
 
 }// namespace El
-#endif // EL_BLAS_LIKE_LEVEL1_COPYASYNC_HPP_
+#endif // EL_BLAS_LIKE_LEVEL1_COPYASYNCLOCAL_HPP_

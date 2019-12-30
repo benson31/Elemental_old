@@ -1,6 +1,5 @@
 #include "El/core.hpp"
 #include "El/blas_like/level1/Copy.hpp"
-#include "El/blas_like/level1/CopyAsync.hpp"
 
 namespace El
 {
@@ -204,6 +203,7 @@ void CopyAsync(AbstractMatrix<T> const& Source, AbstractMatrix<U>& Target)
         LogicError("Copy: Bad device.");
     }
 }
+
 void Copy(BaseDistMatrix const& Source, BaseDistMatrix& Target)
 {
     using FunctorT = CopyFunctor;
@@ -251,7 +251,6 @@ void CopyAsync(BaseDistMatrix const& Source, BaseDistMatrix& Target)
     PROTO_CPU_HALF(T);                          \
     PROTO_GPU_HALF(T)
 
-#if 0
 PROTO_COMPLETE(float);
 PROTO_COMPLETE(double);
 
@@ -266,7 +265,6 @@ PROTO_COMPLETE(gpu_half_type);
 // Integer types
 PROTO_SAME(uint8_t);
 PROTO_SAME(int);
-#endif // 0
 
 // Complex types
 PROTO_SAME(Complex<float>);

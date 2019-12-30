@@ -1,50 +1,19 @@
-#ifndef EL_BLAS_LIKE_LEVEL1_COPYFUNCTIONSTHATDOSTUFF_HPP_
-#define EL_BLAS_LIKE_LEVEL1_COPYFUNCTIONSTHATDOSTUFF_HPP_
+#ifndef EL_BLAS_LIKE_LEVEL1_COPYLOCAL_HPP_
+#define EL_BLAS_LIKE_LEVEL1_COPYLOCAL_HPP_
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
+#include "El/blas_like/level1/EntrywiseMap.hpp"
+
 #include <hydrogen/Device.hpp>
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/blas/GPU_BLAS.hpp>
+#endif
 
 namespace El
 {
-template <bool B>
-using BoolVT = std::integral_constant<bool, B>;
-
-namespace details
-{
-
-/** @brief A simple metafunction for interoping bitwise-equivalent
- *         types across device interfaces.
- */
-template <typename T, Device D>
-struct CompatibleStorageTypeT
-{
-    using type = T;
-};
-
-template <typename T, Device D>
-using CompatibleStorageType = typename CompatibleStorageTypeT<T, D>::type;
-
-#if defined(HYDROGEN_HAVE_HALF) && defined(HYDROGEN_GPU_USE_FP16)
-
-template <>
-struct CompatibleStorageTypeT<cpu_half_type, El::Device::GPU>
-{
-    using type = gpu_half_type;
-};
-
-#endif // defined(HYDROGEN_HAVE_HALF) && defined(HYDROGEN_GPU_USE_FP16)
-
-template <typename T>
-using CPUStorageType = CompatibleStorageType<T, Device::CPU>;
-
-#ifdef HYDROGEN_HAVE_GPU
-template <typename T>
-using GPUStorageType = CompatibleStorageType<T, Device::GPU>;
-#endif
-}// namespace details
 
 // There are the following cases:
 //
@@ -325,4 +294,4 @@ void Copy(Matrix<T, D1> const& src, Matrix<U, D2>& tgt)
 }
 
 }// namespace El
-#endif // EL_BLAS_LIKE_LEVEL1_COPYFUNCTIONSTHATDOSTUFF_HPP_
+#endif // EL_BLAS_LIKE_LEVEL1_COPYLOCAL_HPP_

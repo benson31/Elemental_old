@@ -332,7 +332,7 @@ if (Hydrogen_ENABLE_CUDA)
     endif ()
 
     find_package(CUDA REQUIRED) # Enable all the macros
-    #find_package(NVML REQUIRED)
+    find_package(NVML REQUIRED)
 
     if (Hydrogen_ENABLE_CUBLAS_TENSOR_MATH)
       set(HYDROGEN_CUBLAS_USE_TENSOR_OP_MATH TRUE)

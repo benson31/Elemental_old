@@ -1,3 +1,8 @@
+#ifndef EL_BLAS_LIKE_LEVEL1_COPYFROMROOT_HPP_
+#define EL_BLAS_LIKE_LEVEL1_COPYFROMROOT_HPP_
+
+namespace El
+{
 
 template<typename T>
 void CopyFromRoot(const Matrix<T>& A, DistMatrix<T,CIRC,CIRC>& B,
@@ -40,3 +45,6 @@ void CopyFromNonRoot (DistMatrix<T,CIRC,CIRC,BLOCK>& B, bool includingViewers)
         LogicError("Called CopyFromNonRoot from root");
     B.MakeSizeConsistent(includingViewers);
 }
+
+}// namespace El
+#endif // EL_BLAS_LIKE_LEVEL1_COPYFROMROOT_HPP_

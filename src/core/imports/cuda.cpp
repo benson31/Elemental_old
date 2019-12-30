@@ -10,9 +10,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
-#ifdef TOM_YOU_MUST_FIX_THIS_FIXME_TODO
 #include <nvml.h>
-#endif // TOM_YOU_MUST_FIX_THIS_FIXME_TODO
 
 #include <cstdlib>// getenv
 #include <iostream>
@@ -30,14 +28,12 @@ void InitializeCUDA(int argc, char* argv[])
 
     unsigned int numDevices = 0;
     int device = 0;
-#ifdef TOM_YOU_MUST_FIX_THIS_FIXME_TODO
     nvmlReturn_t r = nvmlInit();
     if (r != NVML_SUCCESS) { throw std::runtime_error("NVML error"); }
     r = nvmlDeviceGetCount(&numDevices);
     if (r != NVML_SUCCESS) { throw std::runtime_error("NVML error"); }
     r = nvmlShutdown();
     if (r != NVML_SUCCESS) { throw std::runtime_error("NVML error"); }
-#endif // TOM_YOU_MUST_FIX_THIS_FIXME_TODO
     switch (numDevices)
     {
     case 0: return;
@@ -73,14 +69,12 @@ GPUManager::GPUManager(int device)
     : numDevices_{0}, device_{device}, stream_{nullptr}, cublasHandle_{nullptr}
 {
     // Check if device is valid
-#ifdef TOM_YOU_MUST_FIX_THIS_FIXME_TODO
     nvmlReturn_t r = nvmlInit();
     if (r != NVML_SUCCESS) { throw std::runtime_error("NVML error"); }
     r = nvmlDeviceGetCount(&numDevices_);
     if (r != NVML_SUCCESS) { throw std::runtime_error("NVML error"); }
     r = nvmlShutdown();
     if (r != NVML_SUCCESS) { throw std::runtime_error("NVML error"); }
-#endif // TOM_YOU_MUST_FIX_THIS_FIXME_TODO
     if (device_ < 0 || (unsigned int) device_ >= numDevices_)
     {
         std::ostringstream oss;

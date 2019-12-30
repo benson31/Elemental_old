@@ -39,9 +39,14 @@ if (HYDROGEN_HAVE_GPU)
   list(APPEND HYDROGEN_COPY_DEVICES "Device::GPU")
 endif ()
 
+string(CONCAT _H_COPY_STRING
+  "template void Copy("
+  "Matrix<@_ARG0@, @_ARG1@> const&, Matrix<@_ARG2@, @_ARG3@>&);\n"
+  "template void CopyAsync("
+  "Matrix<@_ARG0@, @_ARG1@> const&, Matrix<@_ARG2@, @_ARG3@>&)")
 h_generate_tensor_product_expression(
   _H_COPY_ETI_LIST
-  "EL_EXTERN template void Copy(Matrix<@_ARG0@, @_ARG1@> const&, Matrix<@_ARG2@, @_ARG3@>&)"
+  "${_H_COPY_STRING}"
   HYDROGEN_COPY_TYPES
   HYDROGEN_COPY_DEVICES
   HYDROGEN_COPY_TYPES
