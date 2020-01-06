@@ -162,13 +162,31 @@ void CopyImpl(Matrix<T, Device::GPU> const& A, Matrix<T, Device::GPU>& B)
 }
 #endif // HYDROGEN_HAVE_CUDA
 
+namespace details
+{
+struct InterdeviceSync
+{
+    InterdeviceSync(SyncInfo<Device::CPU> const&,
+                    SyncInfo<Device::GPU> const& GPU_sync)
+        : gpu_sync_{GPU_sync}
+    {}
+
+    InterdeviceSync(SyncInfo<Device::GPU> const& GPU_sync,
+                    SyncInfo<Device::CPU> const&)
+        : gpu_sync_{GPU_sync}
+    {}
+
+    SyncInfo<Device::GPU> gpu_sync_;
+};
+}
+
 // These inter-device copy functions are SYNCHRONOUS with respect to
 // the host.
-// (Case 2, CPU->GPU)
-template <typename T,
-          EnableWhen<And<IsStorageType<T, Device::CPU>,
-                         IsStorageType<T, Device::GPU>>, int> = 0>
-void CopyImpl(Matrix<T, Device::CPU> const& A, Matrix<T, Device::GPU>& B)
+template <typename T, Device D1, Device D2,
+          EnableWhen<And<BoolVT<D1 != D2>,
+                         IsStorageType<T, D1>,
+                         IsStorageType<T, D2>>, int> = 0>
+void CopyImpl(Matrix<T, D1> const& A, Matrix<T, D2>& B)
 {
     EL_DEBUG_CSE;
     const Int height = A.Height();
@@ -179,19 +197,22 @@ void CopyImpl(Matrix<T, Device::CPU> const& A, Matrix<T, Device::GPU>& B)
     const T* EL_RESTRICT ABuf = A.LockedBuffer();
     T* EL_RESTRICT BBuf = B.Buffer();
 
-    SyncInfo<Device::GPU> syncInfoB = SyncInfoFromMatrix(B);
-    InterDeviceCopy<Device::CPU,Device::GPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, syncInfoB.stream_);
-    Synchronize(syncInfoB); // Is this necessary??
+    details::InterdeviceSync isync(SyncInfoFromMatrix(A),
+                                   SyncInfoFromMatrix(B));
+
+    InterDeviceCopy<D1, D2>::MemCopy2DAsync(
+        BBuf, ldB, ABuf, ldA, height, width, isync.gpu_sync_.stream_);
+    Synchronize(isync.gpu_sync_); // Is this necessary??
 }
 
 // These inter-device copy functions are SYNCHRONOUS with respect to
 // the host.
-// (Case 2, CPU->GPU)
-template <typename T,
-          EnableWhen<And<IsStorageType<T, Device::GPU>,
-                         IsStorageType<T, Device::CPU>>, int> = 0>
-void CopyImpl(Matrix<T,Device::GPU> const& A, Matrix<T,Device::CPU>& B)
+template <typename T, Device D1, Device D2,
+          EnableWhen<And<BoolVT<D1 != D2>,
+                         Not<IsSame<T, details::CompatibleStorageType<T, D2>>>,
+                         IsStorageType<T, D1>>, int> = 0>
+void CopyImpl(Matrix<T, D1> const& A,
+              Matrix<details::CompatibleStorageType<T, D2>, D2>& B)
 {
     EL_DEBUG_CSE;
     const Int height = A.Height();
@@ -200,62 +221,13 @@ void CopyImpl(Matrix<T,Device::GPU> const& A, Matrix<T,Device::CPU>& B)
     const Int ldA = A.LDim();
     const Int ldB = B.LDim();
     const T* EL_RESTRICT ABuf = A.LockedBuffer();
-    T* EL_RESTRICT BBuf = B.Buffer();
-
-    SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(A);
-    InterDeviceCopy<Device::GPU, Device::CPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, syncInfoA.stream_);
-    Synchronize(syncInfoA); // Is this necessary??
-}
-
-// These inter-device copy functions are SYNCHRONOUS with respect to
-// the host.
-// (Case 3, CPU->GPU)
-template <typename T,
-          EnableWhen<And<IsStorageType<T, Device::CPU>,
-                         Not<IsSame<T, details::GPUStorageType<T>>>>, int> = 0>
-void CopyImpl(Matrix<T, Device::CPU> const& A,
-              Matrix<details::GPUStorageType<T>, Device::GPU>& B)
-{
-    EL_DEBUG_CSE;
-    const Int height = A.Height();
-    const Int width = A.Width();
-    B.Resize(height, width);
-    const Int ldA = A.LDim();
-    const Int ldB = B.LDim();
-    const T* EL_RESTRICT ABuf = A.LockedBuffer();
-    // This is "safe" because T and GPUStoragetype<T> are bitwise-equivalent.
     T* EL_RESTRICT BBuf = reinterpret_cast<T*>(B.Buffer());
 
-    SyncInfo<Device::GPU> syncInfoB = SyncInfoFromMatrix(B);
-    InterDeviceCopy<Device::CPU, Device::GPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, syncInfoB.stream_);
-    Synchronize(syncInfoB); // Is this necessary??
-}
-
-// These inter-device copy functions are SYNCHRONOUS with respect to
-// the host.
-// (Case 3, CPU->GPU)
-template <typename T,
-          EnableWhen<And<IsStorageType<T, Device::CPU>,
-                         Not<IsSame<T, details::GPUStorageType<T>>>>, int> = 0>
-void CopyImpl(Matrix<details::GPUStorageType<T>, Device::GPU> const& A,
-              Matrix<T,Device::CPU>& B)
-{
-    EL_DEBUG_CSE;
-    const Int height = A.Height();
-    const Int width = A.Width();
-    B.Resize(height, width);
-    const Int ldA = A.LDim();
-    const Int ldB = B.LDim();
-    // This is "safe" because T and GPUStoragetype<T> are bitwise-equivalent.
-    const T* EL_RESTRICT ABuf = reinterpret_cast<T const*>(A.LockedBuffer());
-    T* EL_RESTRICT BBuf = B.Buffer();
-
-    SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(A);
-    InterDeviceCopy<Device::GPU,Device::CPU>::MemCopy2DAsync(
-        BBuf, ldB, ABuf, ldA, height, width, syncInfoA.stream_);
-    Synchronize(syncInfoA); // Is this necessary??
+    details::InterdeviceSync isync(SyncInfoFromMatrix(A),
+                                   SyncInfoFromMatrix(B));
+    InterDeviceCopy<D1, D2>::MemCopy2DAsync(
+        BBuf, ldB, ABuf, ldA, height, width, isync.gpu_sync_.stream_);
+    Synchronize(isync.gpu_sync_); // Is this necessary??
 }
 
 #endif // HYDROGEN_HAVE_GPU
@@ -264,8 +236,10 @@ void CopyImpl(Matrix<details::GPUStorageType<T>, Device::GPU> const& A,
 // (Case 5)
 template <typename T, typename U, Device D1, Device D2,
           EnableWhen<And<BoolVT<D1!=D2>,
+                         CanCast<T,U>,
                          IsStorageType<T, D1>,
-                         IsStorageType<U, D2>>, int> = 0>
+                         IsStorageType<U, D2>>, int> = 0,
+          EnableUnless<IsSame<U, details::CompatibleStorageType<T,D2>>, int> = 0>
 void CopyImpl(Matrix<T, D1> const& src, Matrix<U, D2>& tgt)
 {
     // FIXME: Note that there might be instances in which it could
@@ -279,8 +253,9 @@ void CopyImpl(Matrix<T, D1> const& src, Matrix<U, D2>& tgt)
 
 // (Case 0)
 template <typename T, typename U, Device D1, Device D2,
-          EnableWhen<Or<Not<IsStorageType<T,D1>>,
-                        Not<IsStorageType<U,D2>>>, int> = 0>
+          EnableUnless<And<CanCast<T,U>,
+                           IsStorageType<T, D1>,
+                           IsStorageType<U, D2>>, int> = 0>
 void CopyImpl(Matrix<T, D1> const&, Matrix<U, D2>&)
 {
     LogicError("Cannot dispatch Copy.");
@@ -291,6 +266,26 @@ template <typename T, typename U, Device D1, Device D2>
 void Copy(Matrix<T, D1> const& src, Matrix<U, D2>& tgt)
 {
     CopyImpl(src, tgt);
+}
+
+template <typename T, typename U>
+void Copy(AbstractMatrix<T> const& Source, AbstractMatrix<U>& Target)
+{
+    switch (Target.GetDevice())
+    {
+    case Device::CPU:
+        return details::LaunchCopy(
+            Source, static_cast<Matrix<U, Device::CPU>&>(Target),
+            details::CopyFunctor{});
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        return details::LaunchCopy(
+            Source, static_cast<Matrix<U, Device::GPU>&>(Target),
+            details::CopyFunctor{});
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("Copy: Bad device.");
+    }
 }
 
 }// namespace El

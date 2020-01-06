@@ -132,12 +132,37 @@ void Copy(const BlockMatrix<S>& A, BlockMatrix<T>& B)
     #include <El/macros/GuardAndPayload.h>
 }
 
+template <typename T>
+void Copy(AbstractDistMatrix<T> const& A, AbstractDistMatrix<T>& B)
+{
+    EL_DEBUG_CSE;
+    DistWrap const wrapA=A.Wrap(), wrapB=B.Wrap();
+    if (wrapB == ELEMENT)
+    {
+        auto& ACast = static_cast<ElementalMatrix<T> const&>(A);
+        auto& BCast = static_cast<ElementalMatrix<T>&>(B);
+        Copy(ACast, BCast);
+    }
+    else if (wrapA == BLOCK && wrapB == BLOCK)
+    {
+        auto& ACast = static_cast<BlockMatrix<T> const&>(A);
+        auto& BCast = static_cast<BlockMatrix<T>&>(B);
+        Copy(ACast, BCast);
+    }
+    else
+    {
+        LogicError("If you see this error, please tell Tom.");
+        copy::GeneralPurpose(A, B);
+    }
+}
+
+
 template <typename T, typename U>
 void Copy(AbstractDistMatrix<T> const& A, AbstractDistMatrix<U>& B)
 {
     EL_DEBUG_CSE;
-    const DistWrap wrapA=A.Wrap(), wrapB=B.Wrap();
-    if (wrapA == ELEMENT && wrapB == ELEMENT)
+    DistWrap const wrapA=A.Wrap(), wrapB=B.Wrap();
+    if (wrapB == ELEMENT)
     {
         auto& ACast = static_cast<ElementalMatrix<T> const&>(A);
         auto& BCast = static_cast<ElementalMatrix<U>&>(B);
@@ -152,7 +177,6 @@ void Copy(AbstractDistMatrix<T> const& A, AbstractDistMatrix<U>& B)
     else
     {
         LogicError("If you see this error, please tell Tom.");
-        copy::GeneralPurpose(A, B);
     }
 }
 

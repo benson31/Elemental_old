@@ -110,5 +110,25 @@ void CopyAsync(Matrix<T, D1> const& src, Matrix<U, D2>& tgt)
     CopyAsyncImpl(src, tgt);
 }
 
+template <typename T, typename U>
+void CopyAsync(AbstractMatrix<T> const& Source, AbstractMatrix<U>& Target)
+{
+    switch (Target.GetDevice())
+    {
+    case Device::CPU:
+        return details::LaunchCopy(
+            Source, static_cast<Matrix<U, Device::CPU>&>(Target),
+            details::CopyAsyncFunctor{});
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        return details::LaunchCopy(
+            Source, static_cast<Matrix<U, Device::GPU>&>(Target),
+            details::CopyAsyncFunctor{});
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("Copy: Bad device.");
+    }
+}
+
 }// namespace El
 #endif // EL_BLAS_LIKE_LEVEL1_COPYASYNCLOCAL_HPP_

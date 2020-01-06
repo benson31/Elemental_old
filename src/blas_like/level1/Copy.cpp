@@ -13,7 +13,7 @@ namespace
 // operations on those matrices are dispatched statically.
 
 using MatrixTypes = TypeList<
-    float, double
+    float, double, Complex<float>, Complex<double>
 #ifdef HYDROGEN_HAVE_HALF
     , cpu_half_type
 #endif // HYDROGEN_HAVE_HALF
@@ -87,187 +87,27 @@ struct CopyDispatcher<FunctorT, LHSList, TypeList<>>
     }
 };
 
-// This layer of indirection checks the Tgt types and launches the
-// copy if possible.
-template <typename CopyFunctor,
-          typename T, typename U, Device D1, Device D2,
-          EnableWhen<IsStorageType<T, D1>, int> = 0>
-void LaunchCopy(Matrix<T, D1> const& src, Matrix<U, D2>& tgt,
-                CopyFunctor const& F)
-{
-   return F(src, tgt);
-}
-
-template <typename CopyFunctor,
-          typename T, typename U, Device D1, Device D2,
-          EnableUnless<IsStorageType<T, D1>, int> = 0>
-void LaunchCopy(Matrix<T, D1> const&, Matrix<U, D2>&,
-                CopyFunctor const&)
-{
-    LogicError("The combination U=", TypeTraits<U>::Name(), " "
-               "and D=", DeviceName<D2>(), " is not supported.");
-}
-
-// This layer of indirection checks the Src types; this overload is
-// also useful for some DistMatrix instantiations.
-template <typename CopyFunctor,
-          typename T, typename U, Device D2,
-          EnableWhen<IsStorageType<U, D2>, int> = 0>
-void LaunchCopy(AbstractMatrix<T> const& src, Matrix<U, D2>& tgt,
-                CopyFunctor const& F)
-{
-    switch (src.GetDevice())
-    {
-    case Device::CPU:
-        return LaunchCopy(
-            static_cast<Matrix<T, Device::CPU> const&>(src), tgt, F);
-#ifdef HYDROGEN_HAVE_GPU
-    case Device::GPU:
-        return LaunchCopy(
-            static_cast<Matrix<T, Device::GPU> const&>(src), tgt, F);
-#endif // HYDROGEN_HAVE_GPU
-    default:
-        LogicError("Copy: Bad device.");
-    }
-}
-
-template <typename CopyFunctor,
-          typename T, typename U, Device D2,
-          EnableUnless<IsStorageType<U, D2>, int> = 0>
-void LaunchCopy(AbstractMatrix<T> const&, Matrix<U, D2>&,
-                CopyFunctor const&)
-{
-    LogicError("The combination U=", TypeTraits<U>::Name(), " "
-               "and D=", DeviceName<D2>(), " is not supported.");
-}
-
-// The variadic templates allow these functors to be recycled across
-// sequential and distributed matrices.
-
-struct CopyFunctor
-{
-    template <typename... Args>
-    void operator()(Args&&... args) const
-    {
-        return Copy(std::forward<Args>(args)...);
-    }
-};// CopyFunctor
-
-struct CopyAsyncFunctor
-{
-    template <typename... Args>
-    void operator()(Args&&... args) const
-    {
-        return CopyAsync(std::forward<Args>(args)...);
-    }
-};// CopyAsyncFunctor
-
 }// namespace <anon>
-
-template <typename T, typename U>
-void Copy(AbstractMatrix<T> const& Source, AbstractMatrix<U>& Target)
-{
-    switch (Target.GetDevice())
-    {
-    case Device::CPU:
-        return LaunchCopy(
-            Source, static_cast<Matrix<U, Device::CPU>&>(Target),
-            CopyFunctor{});
-#ifdef HYDROGEN_HAVE_GPU
-    case Device::GPU:
-        return LaunchCopy(
-            Source, static_cast<Matrix<U, Device::GPU>&>(Target),
-            CopyFunctor{});
-#endif // HYDROGEN_HAVE_GPU
-    default:
-        LogicError("Copy: Bad device.");
-    }
-}
-
-template <typename T, typename U>
-void CopyAsync(AbstractMatrix<T> const& Source, AbstractMatrix<U>& Target)
-{
-    switch (Target.GetDevice())
-    {
-    case Device::CPU:
-        return LaunchCopy(
-            Source, static_cast<Matrix<U, Device::CPU>&>(Target),
-            CopyAsyncFunctor{});
-#ifdef HYDROGEN_HAVE_GPU
-    case Device::GPU:
-        return LaunchCopy(
-            Source, static_cast<Matrix<U, Device::GPU>&>(Target),
-            CopyAsyncFunctor{});
-#endif // HYDROGEN_HAVE_GPU
-    default:
-        LogicError("Copy: Bad device.");
-    }
-}
 
 void Copy(BaseDistMatrix const& Source, BaseDistMatrix& Target)
 {
-    using FunctorT = CopyFunctor;
+    using FunctorT = details::CopyFunctor;
     using MatrixTs = ExpandTL<AbstractDistMatrix, MatrixTypes>;
     using Dispatcher = CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
-    CopyFunctor f;
+    FunctorT f;
+
+    break_on_me();
+    OutputFromRoot(mpi::COMM_WORLD, "AHHHHHH");
     return Dispatcher::Do(f, Source, Target);
 }
 
 void CopyAsync(BaseDistMatrix const& Source, BaseDistMatrix& Target)
 {
-    using FunctorT = CopyAsyncFunctor;
+    using FunctorT = details::CopyAsyncFunctor;
     using MatrixTs = ExpandTL<AbstractDistMatrix, MatrixTypes>;
     using Dispatcher = CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
-    CopyAsyncFunctor f;
+    FunctorT f;
     return Dispatcher::Do(f, Source, Target);
 }
-
-#define PROTO(T, U)                                                     \
-    template void Copy(AbstractMatrix<T> const&, AbstractMatrix<U>&);   \
-    template void CopyAsync(AbstractMatrix<T> const&, AbstractMatrix<U>&)
-
-#define PROTO_SAME(T) PROTO(T, T)
-
-#define PROTO_BASIC(T)                          \
-    PROTO(T, float);                            \
-    PROTO(T, double)
-
-#ifdef HYDROGEN_HAVE_HALF
-#define PROTO_CPU_HALF(T)                       \
-    PROTO(T, cpu_half_type)
-#else
-#define PROTO_CPU_HALF(T)
-#endif // HYDROGEN_HAVE_HALF
-
-#ifdef HYDROGEN_GPU_USE_FP16
-#define PROTO_GPU_HALF(T)                       \
-    PROTO(T, gpu_half_type)
-#else
-#define PROTO_GPU_HALF(T)
-#endif // HYDROGEN_GPU_USE_FP16
-
-#define PROTO_COMPLETE(T)                       \
-    PROTO_BASIC(T);                             \
-    PROTO_CPU_HALF(T);                          \
-    PROTO_GPU_HALF(T)
-
-PROTO_COMPLETE(float);
-PROTO_COMPLETE(double);
-
-#ifdef HYDROGEN_HAVE_HALF
-PROTO_COMPLETE(cpu_half_type);
-#endif // HYDROGEN_HAVE_HALF
-
-#ifdef HYDROGEN_GPU_USE_FP16
-PROTO_COMPLETE(gpu_half_type);
-#endif // HYDROGEN_GPU_USE_FP16
-
-// Integer types
-PROTO_SAME(uint8_t);
-PROTO_SAME(int);
-
-// Complex types
-PROTO_SAME(Complex<float>);
-PROTO_SAME(Complex<double>);
 
 }// namespace El
