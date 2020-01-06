@@ -77,20 +77,6 @@ namespace hydrogen
 /** @brief Unified name for the FP16 type on GPU */
 using gpu_half_type = __half;
 
-/** @brief Enable "update" functionality for __half. */
-inline gpu_half_type& operator+=(gpu_half_type& val, gpu_half_type const& rhs)
-{
-    val = float(val) + float(rhs);
-    return val;
-}
-
-/** @brief Enable "scale" functionality for __half. */
-inline gpu_half_type& operator*=(gpu_half_type& val, gpu_half_type const& rhs)
-{
-    val = float(val) * float(rhs);
-    return val;
-}
-
 template <>
 struct TypeTraits<gpu_half_type>
 {
@@ -106,5 +92,39 @@ using gpu_half_type = rocblas_half;
 
 }// namespace hydrogen
 
+#if defined(HYDROGEN_HAVE_CUDA) && !defined(__CUDACC__)
+
+/** @brief Enable "update" functionality for __half. */
+inline hydrogen::gpu_half_type& operator+=(
+    hydrogen::gpu_half_type& val, hydrogen::gpu_half_type const& rhs)
+{
+    val = float(val) + float(rhs);
+    return val;
+}
+
+/** @brief Enable subtract-equal functionality for __half. */
+inline hydrogen::gpu_half_type& operator-=(
+    hydrogen::gpu_half_type& val, hydrogen::gpu_half_type const& rhs)
+{
+    val = float(val) - float(rhs);
+    return val;
+}
+
+/** @brief Enable "scale" functionality for __half. */
+inline hydrogen::gpu_half_type& operator*=(
+    hydrogen::gpu_half_type& val, hydrogen::gpu_half_type const& rhs)
+{
+    val = float(val) * float(rhs);
+    return val;
+}
+
+/** @brief Enable divide-equal functionality for __half. */
+inline hydrogen::gpu_half_type& operator/=(
+    hydrogen::gpu_half_type& val, hydrogen::gpu_half_type const& rhs)
+{
+    val = float(val) / float(rhs);
+    return val;
+}
+#endif // defined(HYDROGEN_HAVE_CUDA) && !defined(__CUDACC__)
 #endif // HYDROGEN_GPU_USE_FP16
 #endif // HYDROGEN_UTILS_HALFPRECISION_HPP_
