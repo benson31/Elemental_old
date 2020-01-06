@@ -131,5 +131,11 @@ hydrogen::gpu_half_type& operator/=(
 }
 
 #endif // defined(HYDROGEN_HAVE_CUDA) && !defined(__CUDACC__)
+
+inline std::ostream& operator<<(std::ostream& os, hydrogen::gpu_half_type const& x)
+{
+    return os << float(x) << "_h";
+}
+
 #endif // HYDROGEN_GPU_USE_FP16
 #endif // HYDROGEN_UTILS_HALFPRECISION_HPP_
