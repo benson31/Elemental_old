@@ -136,7 +136,7 @@ void CopyImpl(Matrix<T, Device::GPU> const& A, Matrix<U, Device::GPU>& B)
 //
 // TODO: Profile to verify this is, indeed, faster.
 template <typename T,
-          EnableWhen<IsStorageType<T, Device::CPU>, int> = 0>
+          EnableWhen<IsStorageType<T, Device::GPU>, int> = 0>
 void CopyImpl(Matrix<T, Device::GPU> const& A, Matrix<T, Device::GPU>& B)
 {
     EL_DEBUG_CSE;
