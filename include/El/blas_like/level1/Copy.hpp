@@ -155,14 +155,12 @@ struct CopyAsyncFunctor
 #include "CopyAsyncDistMatrix.hpp"
 #include "CopyFromRoot.hpp"
 
-// #ifdef EL_INSTANTIATE_BLAS_LEVEL1
-// # define EL_EXTERN
-// #else
-// # define EL_EXTERN extern
-// #endif
+namespace El
+{
 
-// #include "El/CopyETI.hpp"
+void Copy(BaseDistMatrix const&, BaseDistMatrix&);
+void CopyAsync(BaseDistMatrix const&, BaseDistMatrix&);
 
-// #undef EL_EXTERN
+}// namespace El
 
 #endif // ifndef EL_BLAS_COPY_HPP

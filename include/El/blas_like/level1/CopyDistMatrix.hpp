@@ -156,7 +156,6 @@ void Copy(AbstractDistMatrix<T> const& A, AbstractDistMatrix<T>& B)
     }
 }
 
-
 template <typename T, typename U>
 void Copy(AbstractDistMatrix<T> const& A, AbstractDistMatrix<U>& B)
 {
@@ -179,7 +178,6 @@ void Copy(AbstractDistMatrix<T> const& A, AbstractDistMatrix<U>& B)
         LogicError("If you see this error, please tell Tom.");
     }
 }
-
 
 }// namespace El
 #endif // EL_BLAS_LIKE_LEVEL1_COPYDISTMATRIX_HPP_

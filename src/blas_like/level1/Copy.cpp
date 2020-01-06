@@ -95,6 +95,9 @@ void Copy(BaseDistMatrix const& Source, BaseDistMatrix& Target)
     using MatrixTs = ExpandTL<AbstractDistMatrix, MatrixTypes>;
     using Dispatcher = CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
     FunctorT f;
+
+    break_on_me();
+    OutputFromRoot(mpi::COMM_WORLD, "AHHHHHH");
     return Dispatcher::Do(f, Source, Target);
 }
 
