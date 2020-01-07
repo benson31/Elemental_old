@@ -15,6 +15,8 @@ portion of TestGemm.
 #include <El.hpp>
 #include "GemmHelpers/SyncTimer.hpp"
 
+#include <hydrogen/utils/Backtrace.hpp>
+
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -204,6 +206,7 @@ ExperimentResult TestGemm(
 #endif // HYDROGEN_HAVE_CUDA
 
     // Timed runs:
+    global_start_gemm();
     for (size_t ii = 0; ii < num_timed_runs; ++ii)
     {
         auto& timer = timers[ii];
@@ -211,6 +214,7 @@ ExperimentResult TestGemm(
         Gemm(orientA, orientB, alpha, A, B, beta, C, alg);
         timer.Stop();
     }
+    global_stop_gemm();
 
     // IDK if I need this, per se.
     Synchronize(si);
