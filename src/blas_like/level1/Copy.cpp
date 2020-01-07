@@ -1,6 +1,9 @@
 #include "El/core.hpp"
 #include "El/blas_like/level1/Copy.hpp"
 
+static_assert(std::is_integral<El::Int>::value,
+              "El::Int should be integral!");
+
 namespace El
 {
 namespace
@@ -95,9 +98,6 @@ void Copy(BaseDistMatrix const& Source, BaseDistMatrix& Target)
     using MatrixTs = ExpandTL<AbstractDistMatrix, MatrixTypes>;
     using Dispatcher = CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
     FunctorT f;
-
-    break_on_me();
-    OutputFromRoot(mpi::COMM_WORLD, "AHHHHHH");
     return Dispatcher::Do(f, Source, Target);
 }
 

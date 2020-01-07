@@ -130,6 +130,34 @@ hydrogen::gpu_half_type& operator/=(
     return val;
 }
 
+/** @brief Enable add functionality for __half. */
+inline hydrogen::gpu_half_type operator+(
+    hydrogen::gpu_half_type const& val, hydrogen::gpu_half_type const& rhs)
+{
+    return float(val) + float(rhs);
+}
+
+/** @brief Enable subtract functionality for __half. */
+inline hydrogen::gpu_half_type operator-(
+    hydrogen::gpu_half_type const& val, hydrogen::gpu_half_type const& rhs)
+{
+    return float(val) - float(rhs);
+}
+
+/** @brief Enable multiply functionality for __half. */
+inline hydrogen::gpu_half_type operator*(
+    hydrogen::gpu_half_type const& val, hydrogen::gpu_half_type const& rhs)
+{
+    return float(val) * float(rhs);
+}
+
+/** @brief Enable divide functionality for __half. */
+inline hydrogen::gpu_half_type operator/(
+    hydrogen::gpu_half_type const& val, hydrogen::gpu_half_type const& rhs)
+{
+    return float(val) / float(rhs);
+}
+
 #endif // defined(HYDROGEN_HAVE_CUDA) && !defined(__CUDACC__)
 
 inline std::ostream& operator<<(std::ostream& os, hydrogen::gpu_half_type const& x)
