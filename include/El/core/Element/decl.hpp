@@ -684,10 +684,24 @@ template<typename Real,
 Complex<Real> Sqrt( const Complex<Real>& alpha );
 
 template<> Int Sqrt( const Int& alpha );
+#ifdef HYDROGEN_HAVE_HALF
+inline cpu_half_type Pow(cpu_half_type const& base, cpu_half_type const& exp)
+{
+    return half_float::pow(base, exp);
+}
+inline cpu_half_type Sqrt(cpu_half_type const& x)
+{
+    return half_float::sqrt(x);
+}
+#endif // HYDROGEN_HAVE_HALF
 #ifdef HYDROGEN_GPU_USE_FP16
+inline gpu_half_type Pow(gpu_half_type const& base, gpu_half_type const& exp)
+{
+    return std::pow(float(base), float(exp));
+}
 inline gpu_half_type Sqrt(gpu_half_type const& x)
 {
-    return Sqrt(float(x));
+    return std::sqrt(float(x));
 }
 #endif // HYDROGEN_GPU_USE_FP16
 #ifdef HYDROGEN_HAVE_QD
