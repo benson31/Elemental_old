@@ -17,7 +17,105 @@
 #include <El/blas_like/level1/Copy/GeneralPurpose.hpp>
 #include <El/blas_like/level1/Copy/util.hpp>
 
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/blas/GPU_BLAS.hpp>
+#endif
+
 namespace El {
+namespace details {
+
+template <template <typename> class X, typename... Ts>
+using Expand = TypeList<X<Ts>...>;
+
+// This is replaced by a generic multiple dispatch engine in
+// DiHydrogen; this is a one-off use-case for now, so there's no need
+// to backport a robust implementation.
+template <typename FunctorT, typename LHSList, typename RHSList>
+struct CopyDispatcher
+{
+    static void Do(FunctorT f,
+                   BaseDistMatrix const& src, BaseDistMatrix& tgt)
+    {
+        using LHead = Head<LHSList>;
+        using LTail = Tail<LHSList>;
+        if (auto const* ptr = dynamic_cast<LHead const*>(&src))
+            return CopyDispatcher<FunctorT, LHSList, RHSList>::DoRHS(
+                f, *ptr, tgt);
+        else
+            return CopyDispatcher<FunctorT, LTail, RHSList>::Do(f, src, tgt);
+    }
+
+    template <typename LHSType>
+    static void DoRHS(FunctorT f, LHSType const& src, BaseDistMatrix& tgt)
+    {
+        using RHead = Head<RHSList>;
+        using RTail = Tail<RHSList>;
+        if (auto* ptr = dynamic_cast<RHead*>(&tgt))
+            return f(src, *ptr);
+        else
+            return CopyDispatcher<FunctorT, LHSList, RTail>::DoRHS(f, src, tgt);
+    }
+};// struct CopyDispatcher
+
+template <typename FunctorT, typename RHSList>
+struct CopyDispatcher<FunctorT, TypeList<>, RHSList>
+{
+    static void Do(FunctorT const&,
+                   BaseDistMatrix const&, BaseDistMatrix const&)
+    {
+        LogicError("Source matrix type not found.");
+    }
+};
+
+template <typename FunctorT, typename LHSList>
+struct CopyDispatcher<FunctorT, LHSList, TypeList<>>
+{
+    static void DoRHS(FunctorT const&,
+                      BaseDistMatrix const&, BaseDistMatrix const&)
+    {
+        LogicError("Target matrix type not found.");
+    }
+};
+
+struct CopyFunctor
+{
+    template <typename T, typename U>
+    void operator()(AbstractDistMatrix<T> const& src,
+                    AbstractDistMatrix<U>& tgt) const
+    {
+        return Copy(src, tgt);
+    }
+};// CopyFunctor
+
+struct CopyAsyncFunctor
+{
+    template <typename T, typename U>
+    void operator()(AbstractDistMatrix<T> const& src,
+                    AbstractDistMatrix<U>& tgt) const
+    {
+        return CopyAsync(src, tgt);
+    }
+};// CopyAsyncFunctor
+
+}// namespace details
+
+inline void Copy(BaseDistMatrix const& Source, BaseDistMatrix& Target)
+{
+    using FunctorT = details::CopyFunctor;
+    using MatrixTs = details::Expand<AbstractDistMatrix, float, double>;
+    using Dispatcher = details::CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
+    details::CopyFunctor f;
+    return Dispatcher::Do(f, Source, Target);
+}
+
+inline void CopyAsync(BaseDistMatrix const& Source, BaseDistMatrix& Target)
+{
+    using FunctorT = details::CopyAsyncFunctor;
+    using MatrixTs = details::Expand<AbstractDistMatrix, float, double>;
+    using Dispatcher = details::CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
+    details::CopyAsyncFunctor f;
+    return Dispatcher::Do(f, Source, Target);
+}
 
 template <typename T>
 void Copy(AbstractMatrix<T> const& A, AbstractMatrix<T>& B)
@@ -52,6 +150,50 @@ void Copy(AbstractMatrix<T> const& A, AbstractMatrix<T>& B)
         case Device::GPU:
             Copy(static_cast<Matrix<T,Device::GPU> const&>(A),
                  static_cast<Matrix<T,Device::GPU>&>(B));
+            break;
+        default:
+            LogicError("Copy: Bad device.");
+        }
+        break;
+#endif //  HYDROGEN_HAVE_CUDA
+    default:
+        LogicError("Copy: Bad device.");
+    }
+}
+
+template <typename T, typename U>
+void Copy(AbstractMatrix<T> const& A, AbstractMatrix<U>& B)
+{
+    switch (A.GetDevice())
+    {
+    case Device::CPU:
+        switch (B.GetDevice())
+        {
+        case Device::CPU:
+            Copy(static_cast<Matrix<T,Device::CPU> const&>(A),
+                 static_cast<Matrix<U,Device::CPU>&>(B));
+            break;
+#ifdef HYDROGEN_HAVE_CUDA
+        case Device::GPU:
+            Copy(static_cast<Matrix<T,Device::CPU> const&>(A),
+                 static_cast<Matrix<U,Device::GPU>&>(B));
+            break;
+#endif // HYDROGEN_HAVE_CUDA
+        default:
+            LogicError("Copy: Bad device.");
+        }
+        break;
+#ifdef HYDROGEN_HAVE_CUDA
+    case Device::GPU:
+        switch (B.GetDevice())
+        {
+        case Device::CPU:
+            Copy(static_cast<Matrix<T,Device::GPU> const&>(A),
+                 static_cast<Matrix<U,Device::CPU>&>(B));
+            break;
+        case Device::GPU:
+            Copy(static_cast<Matrix<T,Device::GPU> const&>(A),
+                 static_cast<Matrix<U,Device::GPU>&>(B));
             break;
         default:
             LogicError("Copy: Bad device.");
@@ -110,6 +252,29 @@ void Copy( const Matrix<T>& A, Matrix<T>& B )
 }
 
 #ifdef HYDROGEN_HAVE_CUDA
+template <typename T, typename U>
+void Copy(Matrix<T, Device::GPU> const& A, Matrix<U, Device::GPU>& B)
+{
+    EL_DEBUG_CSE;
+    Int const height = A.Height();
+    Int const width = A.Width();
+    B.Resize(height, width);
+    Int const ldA = A.LDim();
+    Int const ldB = B.LDim();
+    T const* ABuf = A.LockedBuffer();
+    U* BBuf = B.Buffer();
+
+    SyncInfo<Device::GPU> syncInfoA = SyncInfoFromMatrix(A),
+        syncInfoB = SyncInfoFromMatrix(B);
+    auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+
+    gpu_blas::Copy(TransposeMode::NORMAL,
+                   height, width,
+                   ABuf, ldA,
+                   BBuf, ldB,
+                   syncInfoB);
+}
+
 template<typename T>
 void Copy(const Matrix<T,Device::GPU>& A, Matrix<T,Device::GPU>& B)
 {
@@ -462,6 +627,7 @@ void Copy( const AbstractDistMatrix<S>& A, AbstractDistMatrix<T>& B )
     }
     else
     {
+        LogicError("If you see this error, please tell Tom.");
         copy::GeneralPurpose( A, B );
     }
 }

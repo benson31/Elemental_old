@@ -76,7 +76,7 @@ Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::GPU> const& A)
 
 template <typename T>
 Matrix<T, Device::CPU>::Matrix(Matrix<T, Device::CPU>&& A) EL_NO_EXCEPT
-    : AbstractMatrix<T>{std::move(A)},
+    : AbstractMatrix<T>(std::move(A)),
     memory_{std::move(A.memory_)}, data_{A.data_}
 {
     A.data_ = nullptr;

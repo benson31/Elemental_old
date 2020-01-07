@@ -23,8 +23,17 @@ namespace hydrogen
 
 #ifdef HYDROGEN_HAVE_HALF
 
-template <typename F>
+template <typename F, typename T>
 struct Caster
+{
+    static T Cast(F const& x)
+    {
+        return static_cast<T>(x);
+    }
+};
+
+template <typename F>
+struct Caster<F, half_float::half>
 {
     static half_float::half Cast(F const& x)
     {
@@ -36,7 +45,7 @@ struct Caster
 template <typename T, typename F>
 T To(F const& x)
 {
-    return Caster<F>::Cast(x);
+    return Caster<F, T>::Cast(x);
 }
 
 #else
