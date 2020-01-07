@@ -158,6 +158,13 @@ inline hydrogen::gpu_half_type operator/(
     return float(val) / float(rhs);
 }
 
+/** @brief Enable unary minus functionality for __half. */
+inline hydrogen::gpu_half_type operator-(
+    hydrogen::gpu_half_type const& val)
+{
+    return -float(val);
+}
+
 #endif // defined(HYDROGEN_HAVE_CUDA) && !defined(__CUDACC__)
 
 inline std::ostream& operator<<(std::ostream& os, hydrogen::gpu_half_type const& x)
