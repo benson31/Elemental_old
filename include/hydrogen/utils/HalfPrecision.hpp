@@ -58,6 +58,32 @@ struct TypeTraits<cpu_half_type>
 
 }// namespace hydrogen
 
+/** @name Bitwise operators, for MPI reduction. */
+///@{
+inline hydrogen::cpu_half_type operator~(hydrogen::cpu_half_type const&)
+{
+    throw std::logic_error(
+        "Bitwise operations not supported for floating-point types.");
+}
+inline hydrogen::cpu_half_type operator|(hydrogen::cpu_half_type const&,
+                                         hydrogen::cpu_half_type const&)
+{
+    throw std::logic_error(
+        "Bitwise operations not supported for floating-point types.");
+}
+inline hydrogen::cpu_half_type operator&(hydrogen::cpu_half_type const&,
+                                         hydrogen::cpu_half_type const&)
+{
+    throw std::logic_error(
+        "Bitwise operations not supported for floating-point types.");
+}
+inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
+                                         hydrogen::cpu_half_type const&)
+{
+    throw std::logic_error(
+        "Bitwise operations not supported for floating-point types.");
+}
+///@}
 #endif // HYDROGEN_HAVE_HALF
 
 // Finally, do the GPU stuff
