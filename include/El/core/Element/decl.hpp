@@ -695,6 +695,10 @@ inline cpu_half_type Sqrt(cpu_half_type const& x)
 }
 #endif // HYDROGEN_HAVE_HALF
 #ifdef HYDROGEN_GPU_USE_FP16
+inline gpu_half_type Log(gpu_half_type const& x)
+{
+    return std::log(float(x));
+}
 inline gpu_half_type Pow(gpu_half_type const& base, gpu_half_type const& exp)
 {
     return std::pow(float(base), float(exp));
