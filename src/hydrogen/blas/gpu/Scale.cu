@@ -1,6 +1,7 @@
 #include <hydrogen/blas/gpu/Scale.hpp>
 
 #include <El/hydrogen_config.h>
+#include <hydrogen/meta/TypeTraits.hpp>
 #include <hydrogen/device/gpu/CUDA.hpp>
 
 #include <cuda_runtime.h>
@@ -66,7 +67,7 @@ void Scale_GPU_impl(
     {
         return;
     }
-    
+
     constexpr int TILE_DIM = 32;
     constexpr int BLK_COLS = 8;
 

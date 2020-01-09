@@ -1,6 +1,7 @@
 #include <hydrogen/blas/gpu/Axpy.hpp>
 
 #include <El/hydrogen_config.h>
+#include <hydrogen/meta/TypeTraits.hpp>
 #include <hydrogen/device/gpu/CUDA.hpp>
 
 #include <cuda_runtime.h>
