@@ -88,6 +88,16 @@ void Write
 
 #ifdef HYDROGEN_GPU_USE_FP16
 template <>
+void Write<gpu_half_type>(AbstractMatrix<gpu_half_type> const& A,
+                          string basename,
+                          FileFormat format, string title)
+{
+    Matrix<float> A_tmp;
+    Copy(A, A_tmp);
+    return Write(A_tmp, basename, format, title);
+}
+
+template <>
 void Write<gpu_half_type>(
     const AbstractDistMatrix<gpu_half_type>& A,
     string basename, FileFormat format, string title)
