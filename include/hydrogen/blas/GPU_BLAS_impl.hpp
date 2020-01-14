@@ -475,7 +475,39 @@ void AxpyImpl(SizeT const&, T const&,
 }
 
 template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::GEMV>>,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::GEMM>>>
+void GemvImpl(
+    TransposeMode transA,
+    SizeT nrows, SizeT ncols,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T const* x, SizeT incx,
+    T const& beta,
+    T* y, SizeT incy,
+    SyncInfo<Device::GPU> const& si)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), si);
+    gpu_blas_impl::Gemm(
+        GetLibraryHandle(),
+        ToNativeTransposeMode(transA),
+        ToNativeTransposeMode(TransposeMode::NORMAL),
+        ToSizeT(transA == TransposeMode::NORMAL ? nrows : ncols),
+        ToSizeT(1),
+        ToSizeT(transA == TransposeMode::NORMAL ? ncols : nrows),
+        alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda),
+        reinterpret_cast<CNTP>(x), ToSizeT(incx),
+        beta,
+        reinterpret_cast<NTP>(y), ToSizeT(incy));
+}
+
+template <typename T, typename SizeT,
           typename=EnableUnless<IsSupportedType<T,BLAS_Op::GEMV>>,
+          typename=EnableUnless<IsSupportedType<T,BLAS_Op::GEMM>>,
           typename=void>
 void GemvImpl(
     TransposeMode const&,
