@@ -38,6 +38,11 @@ template <>
 struct is_arithmetic<half_float::half> : true_type {};
 }// namespace std
 
+// Fix an issue inside the Half library
+#ifndef HALF_ENABLE_F16C_INTRINSICS
+#define HALF_ENABLE_F16C_INTRINSICS __F16C__
+#endif
+
 // Now include the actual Half library.
 #include <half.hpp>
 
