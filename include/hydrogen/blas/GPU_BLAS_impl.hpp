@@ -490,19 +490,23 @@ void GemvImpl(
     using NTP = MakePointer<NativeType<T>>;
     using CNTP = MakePointerToConst<NativeType<T>>;
 
-    auto const ATrans = (incy == 1
+    if (incy != SizeT(1))
+        throw std::runtime_error("incy must be 1 right now. "
+                                 "Let Tom know you've hit this case.");
+
+    auto const ATrans = (incy == SizeT(1)
                          ? transA
                          : (transA == TransposeMode::NORMAL
                             ? TransposeMode::TRANSPOSE
                             : TransposeMode::NORMAL));
-    auto const BTrans = (incx == 1
+    auto const BTrans = (incx == SizeT(1)
                          ? TransposeMode::NORMAL
                          : TransposeMode::TRANSPOSE);
     auto const m = (ATrans == TransposeMode::NORMAL ? nrows : ncols);
     auto const k = (ATrans == TransposeMode::NORMAL ? ncols : nrows);
     auto const n = SizeT(1);
-    auto const LDB = (incx == 1 ? ncols : incx);
-    auto const LDC = (incy == 1 ? nrows : incy);
+    auto const LDB = (incx == SizeT(1) ? ncols : incx);
+    auto const LDC = (incy == SizeT(1) ? nrows : incy);
 
     SyncManager mgr(GetLibraryHandle(), si);
     gpu_blas_impl::Gemm(
