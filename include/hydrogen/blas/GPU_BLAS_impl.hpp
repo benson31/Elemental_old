@@ -490,19 +490,30 @@ void GemvImpl(
     using NTP = MakePointer<NativeType<T>>;
     using CNTP = MakePointerToConst<NativeType<T>>;
 
+    auto const ATrans = (incy == 1
+                         ? transA
+                         : (transA == TransposeMode::NORMAL
+                            ? TransposeMode::TRANSPOSE
+                            : TransposeMode::NORMAL));
+    auto const BTrans = (incx == 1
+                         ? TransposeMode::NORMAL
+                         : TransposeMode::TRANSPOSE);
+    auto const m = (ATrans == TransposeMode::NORMAL ? nrows : ncols);
+    auto const k = (ATrans == TransposeMode::NORMAL ? ncols : nrows);
+    auto const n = SizeT(1);
+    auto const LDB = (incx == 1 ? ncols : incx);
+    auto const LDC = (incy == 1 ? nrows : incy);
+
     SyncManager mgr(GetLibraryHandle(), si);
     gpu_blas_impl::Gemm(
         GetLibraryHandle(),
-        ToNativeTransposeMode(transA),
-        ToNativeTransposeMode(TransposeMode::NORMAL),
-        ToSizeT(transA == TransposeMode::NORMAL ? nrows : ncols),
-        ToSizeT(1),
-        ToSizeT(transA == TransposeMode::NORMAL ? ncols : nrows),
+        ToNativeTransposeMode(ATrans), ToNativeTransposeMode(BTrans),
+        ToSizeT(m), ToSizeT(n), ToSizeT(k),
         alpha,
         reinterpret_cast<CNTP>(A), ToSizeT(lda),
-        reinterpret_cast<CNTP>(x), ToSizeT(incx),
+        reinterpret_cast<CNTP>(x), ToSizeT(LDB),
         beta,
-        reinterpret_cast<NTP>(y), ToSizeT(incy));
+        reinterpret_cast<NTP>(y), ToSizeT(LDC));
 }
 
 template <typename T, typename SizeT,
