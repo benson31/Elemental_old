@@ -494,11 +494,7 @@ void GemvImpl(
         throw std::runtime_error("incy must be 1 right now. "
                                  "Let Tom know you've hit this case.");
 
-    auto const ATrans = (incy == SizeT(1)
-                         ? transA
-                         : (transA == TransposeMode::NORMAL
-                            ? TransposeMode::TRANSPOSE
-                            : TransposeMode::NORMAL));
+    auto const ATrans = transA;
     auto const BTrans = (incx == SizeT(1)
                          ? TransposeMode::NORMAL
                          : TransposeMode::TRANSPOSE);
@@ -506,7 +502,7 @@ void GemvImpl(
     auto const k = (ATrans == TransposeMode::NORMAL ? ncols : nrows);
     auto const n = SizeT(1);
     auto const LDB = (incx == SizeT(1) ? ncols : incx);
-    auto const LDC = (incy == SizeT(1) ? nrows : incy);
+    auto const LDC = nrows;
 
     SyncManager mgr(GetLibraryHandle(), si);
     gpu_blas_impl::Gemm(
