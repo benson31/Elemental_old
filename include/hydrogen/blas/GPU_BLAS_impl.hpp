@@ -475,7 +475,50 @@ void AxpyImpl(SizeT const&, T const&,
 }
 
 template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::GEMV>>,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::GEMM>>>
+void GemvImpl(
+    TransposeMode transA,
+    SizeT nrows, SizeT ncols,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T const* x, SizeT incx,
+    T const& beta,
+    T* y, SizeT incy,
+    SyncInfo<Device::GPU> const& si)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    if (incy != SizeT(1))
+        throw std::runtime_error("incy must be 1 right now. "
+                                 "Let Tom know you've hit this case.");
+
+    auto const ATrans = transA;
+    auto const BTrans = (incx == SizeT(1)
+                         ? TransposeMode::NORMAL
+                         : TransposeMode::TRANSPOSE);
+    auto const m = (ATrans == TransposeMode::NORMAL ? nrows : ncols);
+    auto const k = (ATrans == TransposeMode::NORMAL ? ncols : nrows);
+    auto const n = SizeT(1);
+    auto const LDB = (incx == SizeT(1) ? ncols : incx);
+    auto const LDC = nrows;
+
+    SyncManager mgr(GetLibraryHandle(), si);
+    gpu_blas_impl::Gemm(
+        GetLibraryHandle(),
+        ToNativeTransposeMode(ATrans), ToNativeTransposeMode(BTrans),
+        ToSizeT(m), ToSizeT(n), ToSizeT(k),
+        alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda),
+        reinterpret_cast<CNTP>(x), ToSizeT(LDB),
+        beta,
+        reinterpret_cast<NTP>(y), ToSizeT(LDC));
+}
+
+template <typename T, typename SizeT,
           typename=EnableUnless<IsSupportedType<T,BLAS_Op::GEMV>>,
+          typename=EnableUnless<IsSupportedType<T,BLAS_Op::GEMM>>,
           typename=void>
 void GemvImpl(
     TransposeMode const&,

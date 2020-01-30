@@ -322,6 +322,19 @@ template void Gemv(Orientation orientA,
                    Matrix<double,Device::GPU> const& B,
                    double beta,
                    Matrix<double,Device::GPU>& C);
+#ifdef HYDROGEN_GPU_USE_FP16
+template void Gemv(Orientation orientA,
+                   gpu_half_type alpha,
+                   Matrix<gpu_half_type,Device::GPU> const& A,
+                   Matrix<gpu_half_type,Device::GPU> const& B,
+                   gpu_half_type beta,
+                   Matrix<gpu_half_type,Device::GPU>& C);
+template void Gemv(Orientation, gpu_half_type,
+                   AbstractMatrix<gpu_half_type> const&,
+                   AbstractMatrix<gpu_half_type> const&,
+                   gpu_half_type,
+                   AbstractMatrix<gpu_half_type>&);
+#endif // HYDROGEN_GPU_USE_FP16
 #endif // HYDROGEN_HAVE_CUDA
 
 #define PROTO(T) \

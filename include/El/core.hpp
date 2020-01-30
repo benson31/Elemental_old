@@ -111,17 +111,6 @@ using hydrogen::gpu_half_type;
 #include <quadmath.h>
 #endif
 
-#ifdef HYDROGEN_HAVE_HALF
-template <>
-struct std::is_floating_point<hydrogen::cpu_half_type> : std::true_type {};
-
-template <>
-struct std::is_integral<hydrogen::cpu_half_type> : std::false_type {};
-
-template <>
-struct std::is_arithmetic<hydrogen::cpu_half_type> : std::true_type {};
-#endif
-
 namespace El
 {
 

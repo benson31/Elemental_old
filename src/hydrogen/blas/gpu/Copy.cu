@@ -1,7 +1,9 @@
 #include <hydrogen/blas/gpu/Copy.hpp>
 
 #include <El/hydrogen_config.h>
+#include <hydrogen/meta/TypeTraits.hpp>
 #include <hydrogen/device/gpu/CUDA.hpp>
+
 #include <cuda_runtime.h>
 
 namespace
@@ -82,7 +84,7 @@ void Copy_GPU_impl(
 {
     if (num_entries <= TypeTraits<SizeT>::Zero())
         return;
-    
+
 #ifdef HYDROGEN_DO_BOUNDS_CHECKING
     // The kernel parameters are __restrict__-ed. This helps ensure
     // that's not a lie.

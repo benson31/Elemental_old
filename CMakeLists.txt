@@ -54,7 +54,7 @@ endif (__GIT_EXECUTABLE)
 # This must be set because version tags
 set(HYDROGEN_VERSION_MAJOR 1)
 set(HYDROGEN_VERSION_MINOR 3)
-set(HYDROGEN_VERSION_PATCH 2)
+set(HYDROGEN_VERSION_PATCH 3)
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
@@ -542,6 +542,7 @@ if (HYDROGEN_HAVE_CUDA)
   target_link_libraries(Hydrogen_CUDA PUBLIC ${NVTX_LIBRARIES})
   target_link_libraries(Hydrogen_CUDA PUBLIC cuda::toolkit)
 
+  target_link_libraries(Hydrogen_CXX PUBLIC Hydrogen_CUDA)
   list(APPEND HYDROGEN_LIBRARIES Hydrogen_CUDA)
 endif ()
 
