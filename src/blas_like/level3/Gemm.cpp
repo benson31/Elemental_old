@@ -23,19 +23,24 @@ size_t GetDefaultSyncPoolSize()
         return 1;
 }
 
-bool comms_initiated = false;
-
 hydrogen::SyncInfoPool<hydrogen::Device::GPU> const&
-GetSyncInfoPool(El::Grid const& g)
+InitializeComms(El::Grid const& g,
+                hydrogen::SyncInfoPool<hydrogen::Device::GPU> const& pool)
 {
-    static hydrogen::SyncInfoPool<hydrogen::Device::GPU>
-        pool(GetDefaultSyncPoolSize());
+    static std::forward_list<El::Grid const*> initialized_grids_;
 
-    if (!comms_initiated)
+    using BackendOne = El::BestBackend<float,
+                                       hydrogen::Device::GPU,
+                                       El::Collective::ALLTOALL>;
+    using BackendTwo = El::BestBackend<float,
+                                       hydrogen::Device::GPU,
+                                       El::Collective::ALLGATHER>;
+
+    if (std::find(initialized_grids_.cbegin(),
+                  initialized_grids_.cend(),
+                  &g)
+        == initialized_grids_.cend())
     {
-        using BackendOne = El::BestBackend<float,hydrogen::Device::GPU,El::Collective::ALLTOALL>;
-        using BackendTwo = El::BestBackend<float,hydrogen::Device::GPU,El::Collective::ALLGATHER>;
-
         for (size_t ii = 0; ii < pool.Size(); ++ii)
         {
             auto& syncInfo = pool.Next();
@@ -58,12 +63,19 @@ GetSyncInfoPool(El::Grid const& g)
             g.MDPerpComm().template GetComm<BackendOne>(syncInfo);
             g.MDPerpComm().template GetComm<BackendTwo>(syncInfo);
         }
-
         H_CHECK_CUDA(cudaDeviceSynchronize());
-
-        comms_initiated = true;
+        initialized_grids_.push_front(&g);
     }
     return pool;
+}
+
+hydrogen::SyncInfoPool<hydrogen::Device::GPU> const&
+GetSyncInfoPool(El::Grid const& g)
+{
+    static hydrogen::SyncInfoPool<hydrogen::Device::GPU>
+        pool(GetDefaultSyncPoolSize());
+
+    return InitializeComms(g, pool);
 }
 }// namespace <anon>
 
