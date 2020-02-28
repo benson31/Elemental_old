@@ -310,15 +310,15 @@ main(int argc, char* argv[])
         if (testGPU)
         {
 #ifdef HYDROGEN_GPU_USE_FP16
-            // TestGemm<gpu_half_type,Device::GPU>
-            //     (orientA, orientB,
-            //      m, n, k,
-            //      gpu_half_type(3.f), gpu_half_type(4.f),
-            //      g,
-            //      print, correctness,
-            //      colAlignA, rowAlignA,
-            //      colAlignB, rowAlignB,
-            //      colAlignC, rowAlignC);
+            TestGemm<gpu_half_type,Device::GPU>
+                (orientA, orientB,
+                 m, n, k,
+                 gpu_half_type(3.f), gpu_half_type(4.f),
+                 g,
+                 print, correctness,
+                 colAlignA, rowAlignA,
+                 colAlignB, rowAlignB,
+                 colAlignC, rowAlignC);
 #endif // HYDROGEN_GPU_USE_FP16
             TestGemm<float,Device::GPU>
                 (orientA, orientB,
@@ -329,15 +329,15 @@ main(int argc, char* argv[])
                  colAlignA, rowAlignA,
                  colAlignB, rowAlignB,
                  colAlignC, rowAlignC);
-            // TestGemm<double,Device::GPU>
-            //     (orientA, orientB,
-            //      m, n, k,
-            //      double(3), double(4),
-            //      g,
-            //      print, correctness,
-            //      colAlignA, rowAlignA,
-            //      colAlignB, rowAlignB,
-            //      colAlignC, rowAlignC);
+            TestGemm<double,Device::GPU>
+                (orientA, orientB,
+                 m, n, k,
+                 double(3), double(4),
+                 g,
+                 print, correctness,
+                 colAlignA, rowAlignA,
+                 colAlignB, rowAlignB,
+                 colAlignC, rowAlignC);
         }
 #else
         (void)testGPU;
