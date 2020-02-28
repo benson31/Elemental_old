@@ -313,7 +313,7 @@ void LocalGemm
   T beta,        AbstractDistMatrix<T>& C)
 {
     EL_DEBUG_CSE;
-#ifdef EL_RELEASE
+#ifndef EL_RELEASE
     if(orientA == NORMAL && orientB == NORMAL)
     {
         if(A.ColDist() != C.ColDist() ||
