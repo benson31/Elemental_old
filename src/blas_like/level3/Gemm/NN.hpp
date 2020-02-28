@@ -552,7 +552,13 @@ void SUMMA_NN(
     // will use the multistream versions.
     if (alg == GEMM_DEFAULT)
     {
-        bool const multistream = (GetSyncInfoPool(C.Grid()).Size() > 1);
+#ifdef HYDROGEN_HAVE_GPU
+        bool const multistream =
+            (C.GetLocalDevice() == Device::GPU
+             && GetSyncInfoPool(C.Grid()).Size() > 1);
+#else
+        bool constexpr multistream = false;
+#endif
         if (weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
             alg = GEMM_SUMMA_DOT;
         else if (m <= n && weightTowardsC*m <= sumDim)
