@@ -459,17 +459,23 @@ void SUMMA_TN
     // TODO(poulson): Make this tunable
     const Int blockSizeDot = 2000;
 
+    if (alg == GEMM_DEFAULT)
+    {
+        bool const multistream = (GetSyncInfoPool(C.Grid()).Size() > 1);
+        if(weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
+            alg = GEMM_SUMMA_DOT;
+        else if(m <= n && weightTowardsC*m <= sumDim)
+            alg = (multistream ? GEMM_SUMMA_B_MS : GEMM_SUMMA_B);
+        else if(n <= m && weightTowardsC*n <= sumDim)
+            alg = (multistream ? GEMM_SUMMA_A_MS : GEMM_SUMMA_A);
+        else
+            alg = (multistream ? GEMM_SUMMA_C_MS : GEMM_SUMMA_C);
+    }
+
     switch(alg)
     {
     case GEMM_DEFAULT:
-        if(weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
-            SUMMA_TNDot(orientA, alpha, A, B, C, blockSizeDot);
-        else if(m <= n && weightTowardsC*m <= sumDim)
-            SUMMA_TNB(orientA, alpha, A, B, C);
-        else if(n <= m && weightTowardsC*n <= sumDim)
-            SUMMA_TNA(orientA, alpha, A, B, C);
-        else
-            SUMMA_TNC(orientA, alpha, A, B, C);
+        LogicError("This shouldn't happen.");
         break;
     case GEMM_SUMMA_A_MS: SUMMA_TNA_MS(orientA, alpha, A, B, C); break;
     case GEMM_SUMMA_A:    SUMMA_TNA(orientA, alpha, A, B, C); break;
@@ -477,8 +483,11 @@ void SUMMA_TN
     case GEMM_SUMMA_B:    SUMMA_TNB(orientA, alpha, A, B, C); break;
     case GEMM_SUMMA_C_MS: SUMMA_TNC_MS(orientA, alpha, A, B, C); break;
     case GEMM_SUMMA_C:    SUMMA_TNC(orientA, alpha, A, B, C); break;
-    case GEMM_SUMMA_DOT:  SUMMA_TNDot(orientA, alpha, A, B, C); break;
-    default: LogicError("Unsupported Gemm option");
+    case GEMM_SUMMA_DOT:
+        SUMMA_TNDot(orientA, alpha, A, B, C, blockSizeDot);
+        break;
+    default:
+        LogicError("Unsupported Gemm option");
     }
 }
 
