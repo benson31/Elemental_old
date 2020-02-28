@@ -10,7 +10,11 @@
 #include <El/blas_like/level3.hpp>
 #include "El/core/Profiling.hpp"
 
-#ifdef HYDROGEN_HAVE_GPU
+#if defined(HYDROGEN_HAVE_GPU) && defined(HYDROGEN_HAVE_ALUMINUM)
+#define HYDROGEN_HAVE_MS_GEMM
+#endif
+
+#ifdef HYDROGEN_HAVE_MS_GEMM
 #include "./SyncInfoPool.hpp"
 
 namespace
@@ -28,7 +32,6 @@ hydrogen::SyncInfoPool<hydrogen::Device::GPU> const&
 InitializeComms(El::Grid const& g,
                 hydrogen::SyncInfoPool<hydrogen::Device::GPU> const& pool)
 {
-#ifdef HYDROGEN_HAVE_ALUMINUM
     static std::forward_list<El::Grid const*> initialized_grids_;
     using BackendOne = El::BestBackend<float,
                                        hydrogen::Device::GPU,
@@ -67,10 +70,6 @@ InitializeComms(El::Grid const& g,
         H_CHECK_CUDA(cudaDeviceSynchronize());
         initialized_grids_.push_front(&g);
     }
-#else
-    (void) g;
-#endif // HYDROGEN_HAVE_ALUMINUM
-
     return pool;
 }
 
@@ -83,7 +82,7 @@ GetSyncInfoPool(El::Grid const& g)
     return InitializeComms(g, pool);
 }
 }// namespace <anon>
-#endif // HYDROGEN_HAVE_GPU
+#endif // HYDROGEN_HAVE_MS_GEMM
 
 #include "./Gemm/NN.hpp"
 #include "./Gemm/NT.hpp"

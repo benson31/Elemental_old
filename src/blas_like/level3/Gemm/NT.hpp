@@ -7,9 +7,9 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef HYDROGEN_HAVE_MS_GEMM
 #include "NT_Multistream.hpp"
-#endif // HYDROGEN_HAVE_GPU
+#endif // HYDROGEN_HAVE_MS_GEMM
 
 namespace El {
 namespace gemm {
@@ -103,11 +103,19 @@ void SUMMA_NTA_MS(
     AbstractDistMatrix<T>& CPre)
 {
     EL_DEBUG_CSE;
+#ifndef HYDROGEN_HAVE_MS_GEMM
+    OutputFromRoot(CPre.Grid().Comm(),
+                   "WARNING: Multistream support not available; "
+                   "requires GPU and Aluminum.");
+    SUMMA_NTA(orientB, alpha, APre, BPre, CPre);
+#else
 
     switch (CPre.GetLocalDevice())
     {
     case Device::CPU:
-        Output("WARNING: CPU doesn't support \"multistream\" variants.");
+        OutputFromRoot(
+            CPre.Grid().Comm(),
+            "WARNING: CPU doesn't support \"multistream\" variants.");
         SUMMA_NTA_impl<Device::CPU>(orientB, alpha, APre, BPre, CPre);
         break;
 #ifdef HYDROGEN_HAVE_GPU
@@ -118,6 +126,7 @@ void SUMMA_NTA_MS(
     default:
         LogicError("SUMMA_NTA_MS: Bad device.");
     }
+#endif // HYDROGEN_HAVE_MS_GEMM
 }
 
 // Normal Transpose Gemm that avoids communicating the matrix B
@@ -211,11 +220,19 @@ void SUMMA_NTB_MS(
     AbstractDistMatrix<T>& CPre)
 {
     EL_DEBUG_CSE;
+#ifndef HYDROGEN_HAVE_MS_GEMM
+    OutputFromRoot(CPre.Grid().Comm(),
+                   "WARNING: Multistream support not available; "
+                   "requires GPU and Aluminum.");
+    SUMMA_NTB(orientB, alpha, APre, BPre, CPre);
+#else
 
     switch (CPre.GetLocalDevice())
     {
     case Device::CPU:
-        Output("WARNING: CPU doesn't support \"multistream\" variants.");
+        OutputFromRoot(
+            CPre.Grid().Comm(),
+            "WARNING: CPU doesn't support \"multistream\" variants.");
         SUMMA_NTB_impl<Device::CPU>(orientB, alpha, APre, BPre, CPre);
         break;
 #ifdef HYDROGEN_HAVE_GPU
@@ -226,6 +243,7 @@ void SUMMA_NTB_MS(
     default:
         LogicError("SUMMA_NTB_MS: Bad device.");
     }
+#endif // HYDROGEN_HAVE_MS_GEMM
 }
 
 // Normal Transpose Gemm that avoids communicating the matrix C
@@ -320,11 +338,19 @@ void SUMMA_NTC_MS(
     AbstractDistMatrix<T>& CPre)
 {
     EL_DEBUG_CSE;
+#ifndef HYDROGEN_HAVE_MS_GEMM
+    OutputFromRoot(CPre.Grid().Comm(),
+                   "WARNING: Multistream support not available; "
+                   "requires GPU and Aluminum.");
+    SUMMA_NTC(orientB, alpha, APre, BPre, CPre);
+#else
 
     switch (CPre.GetLocalDevice())
     {
     case Device::CPU:
-        Output("WARNING: CPU doesn't support \"multistream\" variants.");
+        OutputFromRoot(
+            CPre.Grid().Comm(),
+            "WARNING: CPU doesn't support \"multistream\" variants.");
         SUMMA_NTC_impl<Device::CPU>(orientB, alpha, APre, BPre, CPre);
         break;
 #ifdef HYDROGEN_HAVE_GPU
@@ -335,6 +361,7 @@ void SUMMA_NTC_MS(
     default:
         LogicError("SUMMA_NTC_MS: Bad device.");
     }
+#endif // HYDROGEN_HAVE_MS_GEMM
 }
 
 // Normal Transpose Gemm for panel-panel dot products
@@ -466,7 +493,7 @@ void SUMMA_NT
 
     if (alg == GEMM_DEFAULT)
     {
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef HYDROGEN_HAVE_MS_GEMM
         bool const multistream =
             (C.GetLocalDevice() == Device::GPU
              && GetSyncInfoPool(C.Grid()).Size() > 1);

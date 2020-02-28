@@ -43,7 +43,7 @@ add_subdirectory(Gemm)
 #add_subdirectory(TwoSidedTrmm)
 #add_subdirectory(TwoSidedTrsm)
 
-if (HYDROGEN_HAVE_GPU)
+if (HYDROGEN_HAVE_GPU AND HYDROGEN_HAVE_ALUMINUM)
   set_full_path(THIS_DIR_CATCH2_TESTS
     sync_info_pool_test.cpp
     )
