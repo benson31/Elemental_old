@@ -525,9 +525,6 @@ if (HYDROGEN_HAVE_CUDA)
   target_link_libraries(Hydrogen_CXX PUBLIC cuda::toolkit)
 endif ()
 
-target_link_libraries(Hydrogen_CXX PUBLIC unwind-x86_64 unwind)
-#target_link_libraries(Hydrogen_CXX PUBLIC unwind-ppc64 unwind)
-
 # Add the CXX library to "Hydrogen"
 set(HYDROGEN_LIBRARIES Hydrogen_CXX)
 

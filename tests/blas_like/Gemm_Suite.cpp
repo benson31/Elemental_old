@@ -15,23 +15,17 @@ portion of TestGemm.
 #include <El.hpp>
 #include "GemmHelpers/SyncTimer.hpp"
 
-#include <hydrogen/utils/Backtrace.hpp>
-
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <regex>
 #include <vector>
 
+#ifdef HYDROGEN_HAVE_CUDA
 #include <cuda_profiler_api.h>
+#endif
 
 using namespace El;
-
-#ifdef HYDROGEN_HAVE_CUDA
-#define WITH_GPU true
-#else
-#define WITH_GPU false
-#endif
 
 // The basic idea of this file is to run a suite of GEMM experiments
 // without reinitializing MPI/CUDA. To provide some notion of
@@ -113,7 +107,7 @@ void TestAssociativity(
 
     // Compute Y = alpha op(A) (op(B) X) + beta C X
     DistMatrix<T,MC,MR,ELEMENT,D> X(g), Y(g), Z(g);
-    Uniform(X, n, numRHS, TypeTraits<T>::Zero(), TypeTraits<Base<T>>::One());
+    Uniform(X, n, numRHS, T(-0.25f), T(0.25f));
     Gemm(orientB, NORMAL, TypeTraits<T>::One(), B, X, Z);
     Gemm(orientA, NORMAL, alpha, A, Z, Y);
     Gemm(NORMAL, NORMAL, beta, COrig, X, TypeTraits<T>::One(), Y);
@@ -154,11 +148,11 @@ ExperimentResult TestGemm(
     flush(std::cout);
 
     constexpr size_t num_warmup_runs = 5UL;
-    constexpr size_t num_timed_runs = 12UL;
+    constexpr size_t num_timed_runs = 10UL;
 
     SetBlocksize(block_size);
 
-    T alpha = 2.f, beta = 3.f;
+    T alpha = T(0.5f), beta = T(-0.5f);
 
     // Create the matrices
     DistMatrix<T,MC,MR,ELEMENT,D> A(g), B(g), COrig(g), C(g);
@@ -170,11 +164,12 @@ ExperimentResult TestGemm(
     Int B_cols = (orientB == NORMAL ? n : k);
 
     // Setup matrices:
-    Gaussian(A, A_rows, A_cols);
-    Gaussian(B, B_rows, B_cols);
-    Gaussian(COrig, m, n);
+    Uniform(A, A_rows, A_cols, T(-0.1f), T(0.1f));
+    Uniform(B, B_rows, B_cols, T(-0.1f), T(0.1f));
+    Uniform(COrig, m, n, T(-0.1f), T(0.1f));
 
     // Wait for everything to be all setup.
+    mpi::Barrier(g.Comm());
 #ifdef HYDROGEN_HAVE_CUDA
     H_CHECK_CUDA(cudaDeviceSynchronize());
 #endif // HYDROGEN_HAVE_CUDA
@@ -206,15 +201,18 @@ ExperimentResult TestGemm(
 #endif // HYDROGEN_HAVE_CUDA
 
     // Timed runs:
-    global_start_gemm();
+    size_t constexpr num_skips = 2;
     for (size_t ii = 0; ii < num_timed_runs; ++ii)
     {
+#pragma unroll
+        for (size_t skip_run = 0; skip_run < num_skips; ++skip_run)
+            Gemm(orientA, orientB, alpha, A, B, beta, C, alg);
+
         auto& timer = timers[ii];
         timer.Start();
         Gemm(orientA, orientB, alpha, A, B, beta, C, alg);
         timer.Stop();
     }
-    global_stop_gemm();
 
     // IDK if I need this, per se.
     Synchronize(si);
@@ -223,20 +221,10 @@ ExperimentResult TestGemm(
     std::vector<long double> times;
     times.reserve(timers.size());
     size_t count = 0;
-    size_t const skip = 2;
     for (auto const& t : timers)
     {
-        if (count < skip)
-        {
-            volatile auto x = t.GetTime();
-            (void) x;
-            ++count;
-        }
-        else
-        {
-            times.push_back(t.GetTime());
-            mean += times.back();
-        }
+        times.push_back(t.GetTime());
+        mean += times.back();
     }
 
     mean = mean / static_cast<long double>(times.size());
@@ -272,6 +260,11 @@ int main(int argc, char* argv[])
     const std::string output_file = Input("--o", "Output file",
                                           std::string("also_not_a_thing.ext"));
     int gridHeight = Input("--gridHeight","height of process grid",0);
+    volatile int wait = Input("--waitDebug","wait for debugger",0);
+
+    while (wait)
+    {
+    }
 
     ProcessInput();
     PrintInputReport();
@@ -288,11 +281,15 @@ int main(int argc, char* argv[])
 
     ExperimentSuite suite = ParseExperimentFile(input_file, comm);
 
+#ifdef HYDROGEN_HAVE_CUDA
     H_CHECK_CUDA(cudaProfilerStart());
+#endif
 
     ExperimentResults results = RunExperiments(suite, g);
 
+#ifdef HYDROGEN_HAVE_CUDA
     H_CHECK_CUDA(cudaProfilerStop());
+#endif
 
     mpi::Barrier(comm);
 #ifdef HYDROGEN_HAVE_CUDA
@@ -511,6 +508,25 @@ ExperimentSuite ParseExperimentFile(
     return ParseExperimentFile(ifs, comm);
 }
 
+#ifdef HYDROGEN_HAVE_HALF
+template <Device D>
+struct HalfTypeT;
+
+template <>
+struct HalfTypeT<Device::CPU>
+{
+    using type = cpu_half_type;
+};
+
+#ifdef HYDROGEN_HAVE_GPU
+template <>
+struct HalfTypeT<Device::GPU>
+{
+    using type = gpu_half_type;
+};
+#endif // HYDROGEN_HAVE_GPU
+#endif // HYDROGEN_HAVE_HALF
+
 template <Device D>
 ExperimentResult RunExperiment(Experiment const& exp, Grid const& grid)
 {
@@ -518,11 +534,13 @@ ExperimentResult RunExperiment(Experiment const& exp, Grid const& grid)
     {
 #ifdef HYDROGEN_HAVE_HALF
     case FloatType::HALF:
-        throw std::runtime_error("No test for half yet!");
-        //return TestGemm<half_type,D>(
-        //    exp.orient_A, exp.orient_B,
-        //    exp.m, exp.n, exp.k, exp.nb,
-        //    exp.alg, grid);
+    {
+        using half_type = typename HalfTypeT<D>::type;
+        return TestGemm<half_type,D>(
+            exp.orient_A, exp.orient_B,
+            exp.m, exp.n, exp.k, exp.nb,
+            exp.alg, grid);
+    }
 #endif // HYDROGEN_HAVE_HALF
     case FloatType::FLOAT:
         return TestGemm<float,D>(

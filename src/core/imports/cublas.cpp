@@ -51,10 +51,11 @@ void Axpy(cublasHandle_t handle,
           __half const* X, int incx,
           __half* Y, int incy)
 {
+    float alpha_tmp(alpha);
     H_CHECK_CUBLAS(
         cublasAxpyEx(
             handle,
-            n, &alpha, CUDA_R_16F,
+            n, &alpha_tmp, CUDA_R_32F,
             X, CUDA_R_16F, incx,
             Y, CUDA_R_16F, incy,
             CUDA_R_32F));
