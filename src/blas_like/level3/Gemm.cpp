@@ -31,7 +31,7 @@ GetSyncInfoPool(El::Grid const& g)
     static hydrogen::SyncInfoPool<hydrogen::Device::GPU>
         pool(GetDefaultSyncPoolSize());
 
-    if (not comms_initiated)
+    if (!comms_initiated)
     {
         using BackendOne = El::BestBackend<float,hydrogen::Device::GPU,El::Collective::ALLTOALL>;
         using BackendTwo = El::BestBackend<float,hydrogen::Device::GPU,El::Collective::ALLGATHER>;

@@ -547,17 +547,26 @@ void SUMMA_NN(
     // TODO(poulson): Make this tunable
     const Int blockSizeDot = 2000;
 
+    // Until a real profile-based heuristic is derived, we will use
+    // the historical heuristic. If multiple streams are available, we
+    // will use the multistream versions.
+    if (alg == GEMM_DEFAULT)
+    {
+        bool const multistream = (GetSyncInfoPool(C.Grid()).Size() > 1);
+        if (weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
+            alg = GEMM_SUMMA_DOT;
+        else if (m <= n && weightTowardsC*m <= sumDim)
+            alg = (multistream ? GEMM_SUMMA_B_MS : GEMM_SUMMA_B);
+        else if (n <= m && weightTowardsC*n <= sumDim)
+            alg = (multistream ? GEMM_SUMMA_A_MS : GEMM_SUMMA_A);
+        else
+            alg = (multistream ? GEMM_SUMMA_C_MS : GEMM_SUMMA_C);
+    }
+
     switch(alg)
     {
     case GEMM_DEFAULT:
-        if (weightAwayFromDot*m <= sumDim && weightAwayFromDot*n <= sumDim)
-            SUMMA_NNDot(alpha, A, B, C, blockSizeDot);
-        else if (m <= n && weightTowardsC*m <= sumDim)
-            SUMMA_NNB(alpha, A, B, C);
-        else if (n <= m && weightTowardsC*n <= sumDim)
-            SUMMA_NNA(alpha, A, B, C);
-        else
-            SUMMA_NNC(alpha, A, B, C);
+        LogicError("This shouldn't happen.");
         break;
     case GEMM_SUMMA_A_MS: SUMMA_NNA_MS(alpha, A, B, C); break;
     case GEMM_SUMMA_A:    SUMMA_NNA(alpha, A, B, C); break;
@@ -566,7 +575,8 @@ void SUMMA_NN(
     case GEMM_SUMMA_C_MS: SUMMA_NNC_MS(alpha, A, B, C); break;
     case GEMM_SUMMA_C:    SUMMA_NNC(alpha, A, B, C); break;
     case GEMM_SUMMA_DOT:  SUMMA_NNDot(alpha, A, B, C, blockSizeDot); break;
-    default: LogicError("Unsupported Gemm option");
+    default:
+        LogicError("Unsupported Gemm option (this shouldn't be possible)");
     }
 }
 
