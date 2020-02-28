@@ -28,8 +28,8 @@ hydrogen::SyncInfoPool<hydrogen::Device::GPU> const&
 InitializeComms(El::Grid const& g,
                 hydrogen::SyncInfoPool<hydrogen::Device::GPU> const& pool)
 {
+#ifdef HYDROGEN_HAVE_ALUMINUM
     static std::forward_list<El::Grid const*> initialized_grids_;
-
     using BackendOne = El::BestBackend<float,
                                        hydrogen::Device::GPU,
                                        El::Collective::ALLTOALL>;
@@ -67,6 +67,10 @@ InitializeComms(El::Grid const& g,
         H_CHECK_CUDA(cudaDeviceSynchronize());
         initialized_grids_.push_front(&g);
     }
+#else
+    (void) g;
+#endif // HYDROGEN_HAVE_ALUMINUM
+
     return pool;
 }
 
