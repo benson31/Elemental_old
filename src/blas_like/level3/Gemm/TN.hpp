@@ -7,7 +7,9 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 
+#ifdef HYDROGEN_HAVE_GPU
 #include "TN_Multistream.hpp"
+#endif // HYDROGEN_HAVE_GPU
 
 namespace El {
 namespace gemm {

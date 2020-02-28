@@ -105,7 +105,11 @@ void TestGemm
     else
         Gaussian(B, n, k);
     Gaussian(COrig, m, n);
-    cudaDeviceSynchronize();
+
+#ifdef HYDROGEN_HAVE_CUDA
+    H_CHECK_CUDA(cudaDeviceSynchronize());
+#endif // HYDROGEN_HAVE_CUDA
+
     if (print)
     {
         Print(A, "A");

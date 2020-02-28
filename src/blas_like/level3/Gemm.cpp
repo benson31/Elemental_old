@@ -10,6 +10,7 @@
 #include <El/blas_like/level3.hpp>
 #include "El/core/Profiling.hpp"
 
+#ifdef HYDROGEN_HAVE_GPU
 #include "./SyncInfoPool.hpp"
 
 namespace
@@ -78,6 +79,7 @@ GetSyncInfoPool(El::Grid const& g)
     return InitializeComms(g, pool);
 }
 }// namespace <anon>
+#endif // HYDROGEN_HAVE_GPU
 
 #include "./Gemm/NN.hpp"
 #include "./Gemm/NT.hpp"

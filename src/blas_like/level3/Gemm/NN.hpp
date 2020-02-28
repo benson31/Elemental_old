@@ -10,7 +10,9 @@
 #include <El/matrices.hpp>
 #include <El/io.hpp>
 
+#ifdef HYDROGEN_HAVE_GPU
 #include "NN_Multistream.hpp"
+#endif // HYDROGEN_HAVE_GPU
 
 namespace El {
 namespace gemm {
