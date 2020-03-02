@@ -287,20 +287,24 @@ void SUMMA_NNC_impl_multistream(
     // to streams in a round-robin fashion.
     for (auto id = 0UL; id < num_stream_teams; ++id)
     {
-        auto A1 = A1_MC_STAR.emplace(A1_MC_STAR.end(), A.Height(), bsize, g);
-        auto B1 = B1Trans_MR_STAR.emplace(
-            B1Trans_MR_STAR.end(), B.Width(), bsize, g);
-        auto C1 = C_TMP.emplace(C_TMP.end(), C.Height(), C.Width(), g);
-
         auto const& stream_one = stream_pool.Next();
         auto const& stream_two = stream_pool.Next();
 
+        auto A1 = A1_MC_STAR.emplace(A1_MC_STAR.end(), g);
+        auto B1 = B1Trans_MR_STAR.emplace(
+            B1Trans_MR_STAR.end(), g);
+        auto C1 = C_TMP.emplace(C_TMP.end(), g);
+
         // A and B are logically const; these just need to have the
         // right alignment and "stream affinity".
-        A1->AlignWith(C);
-        B1->AlignWith(C);
         SetSyncInfo(A1->Matrix(), stream_one);
         SetSyncInfo(B1->Matrix(), stream_two);
+
+        A1->Resize(A.Height(), bsize);
+        B1->Resize(B.Width(), bsize);
+
+        A1->AlignWith(C);
+        B1->AlignWith(C);
 
         // The copies of C should be initialized to zero so the
         // accumulation is correct.
@@ -311,8 +315,9 @@ void SUMMA_NNC_impl_multistream(
         }
         else
         {
-            C1->AlignWith(C);
             SetSyncInfo(C1->Matrix(), stream_two);
+            C1->Resize(C.Height(), C.Width());
+            C1->AlignWith(C);
 
             // Zero things out.
             Zero(*C1);
