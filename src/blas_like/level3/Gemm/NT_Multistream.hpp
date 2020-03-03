@@ -33,12 +33,17 @@ void SUMMA_NTA_impl_multistream(
     auto& B = BProx.GetLocked();
     auto& C = CProx.Get();
 
+    auto SyncManager = MakeMultiSync(
+        SyncInfo_C,
+        SyncInfoFromMatrix(A.LockedMatrix()),
+        SyncInfoFromMatrix(B.LockedMatrix()));
+
     // Get the sync pool.
     auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL
-        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
+        : std::min(stream_pool.Size(), size_t(num_blocks));
 
     // Temporary distributions
     std::vector<DistMatrix<T,MR,STAR,ELEMENT,D>> B1Trans_MR_STAR;
@@ -53,14 +58,15 @@ void SUMMA_NTA_impl_multistream(
         auto B1T = B1Trans_MR_STAR.emplace(B1Trans_MR_STAR.end(), g);
         auto D1 = D1_MC_STAR.emplace(D1_MC_STAR.end(), g);
 
-        auto const& stream_one = stream_pool.Next();
-        auto const& stream_two = stream_pool.Next();
+        auto const& the_stream = stream_pool.Next();
 
         B1T->AlignWith(A);
         D1->AlignWith(A);
 
-        SetSyncInfo(B1T->Matrix(), stream_one);
-        SetSyncInfo(D1->Matrix(), stream_two);
+        SetSyncInfo(B1T->Matrix(), the_stream);
+        SetSyncInfo(D1->Matrix(), the_stream);
+
+        AddSynchronizationPoint(SyncInfo_C, the_stream);
     }
 
     size_t team_id = 0UL;
@@ -77,14 +83,12 @@ void SUMMA_NTA_impl_multistream(
         auto& BTMRSTAR = B1Trans_MR_STAR[team_id];
         auto& DMCSTAR = D1_MC_STAR[team_id];
 
-        auto const& stream_one =
-            SyncInfoFromMatrix(BTMRSTAR.Matrix());
-        auto const& stream_two =
+        auto const& the_stream =
             SyncInfoFromMatrix(DMCSTAR.Matrix());
 
-        SetSyncInfo(A1.Matrix(), stream_one);
-        SetSyncInfo(B1.Matrix(), stream_one);
-        SetSyncInfo(C1.Matrix(), stream_two);
+        SetSyncInfo(A1.Matrix(), the_stream);
+        SetSyncInfo(B1.Matrix(), the_stream);
+        SetSyncInfo(C1.Matrix(), the_stream);
 
         // C1[MC,*] := alpha A[MC,MR] (B1^[T/H])[MR,*]
         Transpose(B1, BTMRSTAR, conjugate);
@@ -95,10 +99,12 @@ void SUMMA_NTA_impl_multistream(
 
         // Bookkeeping.
         team_id = (team_id + 1) % num_stream_teams;
-
-        // Have C wait on all streams
-        AddSynchronizationPoint(stream_two, SyncInfo_C);
     }
+
+    // Have C wait on all streams
+    for (auto const& mat : D1_MC_STAR)
+        AddSynchronizationPoint(
+            SyncInfoFromMatrix(mat.LockedMatrix()), SyncInfo_C);
 }
 
 template <typename T,
@@ -124,7 +130,7 @@ void SUMMA_NTB_impl_multistream(
 
     constexpr Device D = Device::GPU;
 
-     auto SyncInfo_C = SyncInfoFromMatrix(
+    auto SyncInfo_C = SyncInfoFromMatrix(
         static_cast<Matrix<T,D> const&>(CPre.LockedMatrix()));
 
     AUTO_PROFILE_REGION(
@@ -143,12 +149,17 @@ void SUMMA_NTB_impl_multistream(
     auto& B = BProx.GetLocked();
     auto& C = CProx.Get();
 
+    auto SyncManager = MakeMultiSync(
+        SyncInfo_C,
+        SyncInfoFromMatrix(A.LockedMatrix()),
+        SyncInfoFromMatrix(B.LockedMatrix()));
+
     // Get the sync pool.
     auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL
-        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
+        : std::min(stream_pool.Size(), size_t(num_blocks));
 
     // Temporary distributions
     std::vector<DistMatrix<T,MR,STAR,ELEMENT,D>> A1Trans_MR_STAR;
@@ -169,15 +180,14 @@ void SUMMA_NTB_impl_multistream(
         auto& D1 = D1_STAR_MC.back();
         auto& DMRMC = D1_MR_MC.back();
 
-        auto const& stream_one = stream_pool.Next();
-        auto const& stream_two = stream_pool.Next();
+        auto const& the_stream = stream_pool.Next();
 
         A1.AlignWith(B);
         D1.AlignWith(B);
 
-        SetSyncInfo(A1.Matrix(), stream_one);
-        SetSyncInfo(D1.Matrix(), stream_one);
-        SetSyncInfo(DMRMC.Matrix(), stream_two);
+        SetSyncInfo(A1.Matrix(), the_stream);
+        SetSyncInfo(D1.Matrix(), the_stream);
+        SetSyncInfo(DMRMC.Matrix(), the_stream);
     }
 
     size_t team_id = 0UL;
@@ -194,14 +204,12 @@ void SUMMA_NTB_impl_multistream(
         auto& DSTARMC = D1_STAR_MC[team_id];
         auto& DMRMC = D1_MR_MC[team_id];
 
-        auto const& stream_one =
-            SyncInfoFromMatrix(ATMRSTAR.LockedMatrix());
-        auto const& stream_two =
+        auto const& the_stream =
             SyncInfoFromMatrix(DMRMC.LockedMatrix());
 
-        SetSyncInfo(A1.Matrix(), stream_one);
-        SetSyncInfo(B1.Matrix(), stream_one);
-        SetSyncInfo(C1.Matrix(), stream_two);
+        SetSyncInfo(A1.Matrix(), the_stream);
+        SetSyncInfo(B1.Matrix(), the_stream);
+        SetSyncInfo(C1.Matrix(), the_stream);
 
         // D1[*,MC] := alpha A1[*,MR] (B[MC,MR])^T
         //           = alpha (A1^T)[MR,*] (B^T)[MR,MC]
@@ -214,10 +222,11 @@ void SUMMA_NTB_impl_multistream(
 
         // Bookkeeping.
         team_id = (team_id + 1) % num_stream_teams;
-
-        // Syncronize against C
-        AddSynchronizationPoint(stream_two, SyncInfo_C);
     }
+
+    for (auto const& mat : D1_MR_MC)
+        AddSynchronizationPoint(
+            SyncInfoFromMatrix(mat.LockedMatrix()), SyncInfo_C);
 }
 
 template <typename T,
@@ -261,6 +270,12 @@ void SUMMA_NTC_impl_multistream(
     auto& B = BProx.GetLocked();
     auto& C = CProx.Get();
 
+    auto const SyncInfo_C = SyncInfoFromMatrix(C.LockedMatrix());
+    auto SyncManager = MakeMultiSync(
+        SyncInfo_C,
+        SyncInfoFromMatrix(A.LockedMatrix()),
+        SyncInfoFromMatrix(B.LockedMatrix()));
+
     // Temporary distributions
     std::vector<DistMatrix<T,MC,STAR,ELEMENT,D>> A1_MC_STAR;
     std::vector<DistMatrix<T,VR,STAR,ELEMENT,D>> B1_VR_STAR;
@@ -301,6 +316,7 @@ void SUMMA_NTC_impl_multistream(
         {
             View(*C1, C);
             SetSyncInfo(C1->Matrix(), stream_two);
+            AddSynchronizationPoint(SyncInfo_C, stream_two);
         }
         else
         {

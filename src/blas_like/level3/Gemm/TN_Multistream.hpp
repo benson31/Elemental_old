@@ -32,12 +32,17 @@ void SUMMA_TNA_impl_multistream(
     auto& B = BProx.GetLocked();
     auto& C = CProx.Get();
 
+    auto SyncManager = MakeMultiSync(
+        SyncInfo_C,
+        SyncInfoFromMatrix(A.LockedMatrix()),
+        SyncInfoFromMatrix(B.LockedMatrix()));
+
     // Get the sync pool.
     auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL
-        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
+        : std::min(stream_pool.Size(), size_t(num_blocks));
 
     // Temporary distributions
     std::vector<DistMatrix<T,MC,STAR,ELEMENT,D>> B1_MC_STAR;
@@ -55,15 +60,16 @@ void SUMMA_TNA_impl_multistream(
         auto D1 = D1_MR_STAR.emplace(D1_MR_STAR.end(), g);
         auto D2 = D1_MR_MC.emplace(D1_MR_MC.end(), g);
 
-        auto const& stream_one = stream_pool.Next();
-        auto const& stream_two = stream_pool.Next();
+        auto const& the_stream = stream_pool.Next();
 
         B1->AlignWith(A);
         D1->AlignWith(A);
 
-        SetSyncInfo(B1->Matrix(), stream_one);
-        SetSyncInfo(D1->Matrix(), stream_two);
-        SetSyncInfo(D2->Matrix(), stream_two);
+        SetSyncInfo(B1->Matrix(), the_stream);
+        SetSyncInfo(D1->Matrix(), the_stream);
+        SetSyncInfo(D2->Matrix(), the_stream);
+
+        AddSynchronizationPoint(SyncInfo_C, the_stream);
     }
 
     size_t team_id = 0UL;
@@ -80,14 +86,12 @@ void SUMMA_TNA_impl_multistream(
         auto& DMRSTAR = D1_MR_STAR[team_id];
         auto& DMRMC = D1_MR_MC[team_id];
 
-        auto const& stream_one =
+        auto const& the_stream =
             SyncInfoFromMatrix(BMCSTAR.Matrix());
-        auto const& stream_two =
-            SyncInfoFromMatrix(DMRSTAR.Matrix());
 
-        SetSyncInfo(A1.Matrix(), stream_one);
-        SetSyncInfo(B1.Matrix(), stream_one);
-        SetSyncInfo(C1.Matrix(), stream_two);
+        SetSyncInfo(A1.Matrix(), the_stream);
+        SetSyncInfo(B1.Matrix(), the_stream);
+        SetSyncInfo(C1.Matrix(), the_stream);
 
         // D1[MR,*] := alpha (A1[MC,MR])^T B1[MC,*]
         //           = alpha (A1^T)[MR,MC] B1[MC,*]
@@ -100,10 +104,12 @@ void SUMMA_TNA_impl_multistream(
 
         // Bookkeeping.
         team_id = (team_id + 1) % num_stream_teams;
-
-        // Have C wait on all streams
-        AddSynchronizationPoint(stream_two, SyncInfo_C);
     }
+
+    // Have C wait on all streams
+    for (auto const& mat : D1_MR_MC)
+        AddSynchronizationPoint(
+            SyncInfoFromMatrix(mat.LockedMatrix()), SyncInfo_C);
 }
 
 template <typename T,
@@ -150,11 +156,16 @@ void SUMMA_TNB_impl_multistream(
     auto& B = BProx.GetLocked();
     auto& C = CProx.Get();
 
+    auto SyncManager = MakeMultiSync(
+        SyncInfo_C,
+        SyncInfoFromMatrix(A.LockedMatrix()),
+        SyncInfoFromMatrix(B.LockedMatrix()));
+
     auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
         stream_pool.Size() == 1UL
         ? 1UL
-        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
+        : std::min(stream_pool.Size(), size_t(num_blocks));
 
     // Temporary distributions
     std::vector<DistMatrix<T,MC,STAR,ELEMENT,D>> A1_MC_STAR;
@@ -169,14 +180,15 @@ void SUMMA_TNB_impl_multistream(
         auto A1 = A1_MC_STAR.emplace(A1_MC_STAR.end(), g);
         auto D1 = D1Trans_MR_STAR.emplace(D1Trans_MR_STAR.end(), g);
 
-        auto const& stream_one = stream_pool.Next();
-        auto const& stream_two = stream_pool.Next();
+        auto const& the_stream = stream_pool.Next();
 
         A1->AlignWith(B);
         D1->AlignWith(B);
 
-        SetSyncInfo(A1->Matrix(), stream_one);
-        SetSyncInfo(D1->Matrix(), stream_two);
+        SetSyncInfo(A1->Matrix(), the_stream);
+        SetSyncInfo(D1->Matrix(), the_stream);
+
+        AddSynchronizationPoint(SyncInfo_C, the_stream);
     }
 
     size_t team_id = 0UL;
@@ -192,14 +204,12 @@ void SUMMA_TNB_impl_multistream(
         auto& AMCSTAR = A1_MC_STAR[team_id];
         auto& DTMRSTAR = D1Trans_MR_STAR[team_id];
 
-        auto const& stream_one =
-            SyncInfoFromMatrix(AMCSTAR.LockedMatrix());
-        auto const& stream_two =
+        auto const& the_stream =
             SyncInfoFromMatrix(DTMRSTAR.LockedMatrix());
 
-        SetSyncInfo(A1.Matrix(), stream_one);
-        SetSyncInfo(B1.Matrix(), stream_one);
-        SetSyncInfo(C1.Matrix(), stream_two);
+        SetSyncInfo(A1.Matrix(), the_stream);
+        SetSyncInfo(B1.Matrix(), the_stream);
+        SetSyncInfo(C1.Matrix(), the_stream);
 
         // D1[*,MR] := alpha (A1[MC,*])^[T/H] B[MC,MR]
         //           = alpha (A1^[T/H])[*,MC] B[MC,MR]
@@ -209,10 +219,13 @@ void SUMMA_TNB_impl_multistream(
 
         // Bookkeeping.
         team_id = (team_id + 1) % num_stream_teams;
-
-        // Syncronize against C
-        AddSynchronizationPoint(stream_two, SyncInfo_C);
     }
+
+    // Syncronize against C
+    for (auto const& mat : D1Trans_MR_STAR)
+        AddSynchronizationPoint(SyncInfoFromMatrix(mat.LockedMatrix()),
+                                SyncInfo_C);
+
 }
 
 template <typename T,
@@ -256,6 +269,12 @@ void SUMMA_TNC_impl_multistream(
     auto& B = BProx.GetLocked();
     auto& C = CProx.Get();
 
+    auto const SyncInfo_C = SyncInfoFromMatrix(C.LockedMatrix());
+    auto SyncManager = MakeMultiSync(
+        SyncInfo_C,
+        SyncInfoFromMatrix(A.LockedMatrix()),
+        SyncInfoFromMatrix(B.LockedMatrix()));
+
     // Get the sync pool.
     auto const& stream_pool = GetSyncInfoPool(C.Grid());
     auto const num_stream_teams =
@@ -295,6 +314,7 @@ void SUMMA_TNC_impl_multistream(
         {
             View(C1, C);
             SetSyncInfo(C1.Matrix(), stream_two);
+            AddSynchronizationPoint(SyncInfo_C, stream_two);
         }
         else
         {
@@ -337,15 +357,16 @@ void SUMMA_TNC_impl_multistream(
         team_id = (team_id + 1) % num_stream_teams;
     }
 
+    AddSynchronizationPoint(
+        SyncInfoFromMatrix(C_TMP.front().LockedMatrix()),
+        SyncInfo_C);
+
     // Compute the reduction into the "real C". This work will
     // serialize on C's stream, so there is no race here.
     for (size_t ii = 1; ii < C_TMP.size(); ++ii)
     {
-        Axpy(TypeTraits<T>::One(), C_TMP[ii], C_TMP.front());
+        Axpy(TypeTraits<T>::One(), C_TMP[ii], C);
     }
-
-    AddSynchronizationPoint(SyncInfoFromMatrix(C_TMP.front().LockedMatrix()),
-                            SyncInfoFromMatrix(C.LockedMatrix()));
 }
 
 template <typename T,
