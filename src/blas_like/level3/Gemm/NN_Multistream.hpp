@@ -188,6 +188,8 @@ void SUMMA_NNB_impl_multistream(
 
         SetSyncInfo(A1->Matrix(), the_stream);
         SetSyncInfo(D1->Matrix(), the_stream);
+
+        AddSynchronizationPoint(SyncInfo_C, the_stream);
     }
 
     size_t team_id = 0UL;
@@ -269,6 +271,7 @@ void SUMMA_NNC_impl_multistream(
     auto& B = BProx.GetLocked();
     auto& C = CProx.Get();
 
+    auto const SyncInfo_C = SyncInfoFromMatrix(C.LockedMatrix());
     auto SyncManager = MakeMultiSync(
         SyncInfoFromMatrix(C.LockedMatrix()),
         SyncInfoFromMatrix(A.LockedMatrix()),
@@ -313,14 +316,15 @@ void SUMMA_NNC_impl_multistream(
         A1->AlignWith(C);
         B1->AlignWith(C);
 
+        AddSynchronizationPoint(SyncInfo_C, stream_one);
+        AddSynchronizationPoint(SyncInfo_C, stream_two);
+
         // The copies of C should be initialized to zero so the
         // accumulation is correct.
         if (id == 0UL)
         {
             View(*C1, C);
             SetSyncInfo(C1->Matrix(), stream_two);
-            AddSynchronizationPoint(
-                SyncInfoFromMatrix(C.LockedMatrix()), stream_two);
         }
         else
         {

@@ -188,6 +188,8 @@ void SUMMA_NTB_impl_multistream(
         SetSyncInfo(A1.Matrix(), the_stream);
         SetSyncInfo(D1.Matrix(), the_stream);
         SetSyncInfo(DMRMC.Matrix(), the_stream);
+
+        AddSynchronizationPoint(SyncInfo_C, the_stream);
     }
 
     size_t team_id = 0UL;
@@ -312,11 +314,13 @@ void SUMMA_NTC_impl_multistream(
         SetSyncInfo(B1->Matrix(), stream_two);
         SetSyncInfo(B1T->Matrix(), stream_two);
 
+        AddSynchronizationPoint(SyncInfo_C, stream_one);
+        AddSynchronizationPoint(SyncInfo_C, stream_two);
+
         if (id == 0UL)
         {
             View(*C1, C);
             SetSyncInfo(C1->Matrix(), stream_two);
-            AddSynchronizationPoint(SyncInfo_C, stream_two);
         }
         else
         {

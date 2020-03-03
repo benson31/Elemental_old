@@ -225,7 +225,6 @@ void SUMMA_TNB_impl_multistream(
     for (auto const& mat : D1Trans_MR_STAR)
         AddSynchronizationPoint(SyncInfoFromMatrix(mat.LockedMatrix()),
                                 SyncInfo_C);
-
 }
 
 template <typename T,
@@ -310,11 +309,13 @@ void SUMMA_TNC_impl_multistream(
         SetSyncInfo(A1.Matrix(), stream_one);
         SetSyncInfo(B1.Matrix(), stream_two);
 
+        AddSynchronizationPoint(SyncInfo_C, stream_one);
+        AddSynchronizationPoint(SyncInfo_C, stream_two);
+
         if (id == 0UL)
         {
             View(C1, C);
             SetSyncInfo(C1.Matrix(), stream_two);
-            AddSynchronizationPoint(SyncInfo_C, stream_two);
         }
         else
         {
