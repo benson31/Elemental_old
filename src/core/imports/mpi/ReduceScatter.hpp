@@ -46,6 +46,7 @@ void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
         return LocalCopy(sbuf, rbuf, count, syncInfo);
 
     using Backend = BestBackend<T,D,Collective::REDUCESCATTER>;
+    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::Reduce_scatter<Backend>(
         sbuf, rbuf, count, MPI_Op2ReductionOperator(AlNativeOp<T>(op)),
         comm.template GetComm<Backend>(syncInfo));
@@ -157,6 +158,7 @@ void ReduceScatter(T* buf, int count, Op op, Comm const& comm,
         return;
 
     using Backend = BestBackend<T,D,Collective::REDUCESCATTER>;
+    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::Reduce_scatter<Backend>(
         buf, count, MPI_Op2ReductionOperator(AlNativeOp<T>(op)),
         comm.template GetComm<Backend>(syncInfo));

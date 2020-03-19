@@ -16,6 +16,7 @@ void Broadcast(T* buffer, int count, int root, Comm const& comm,
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::BROADCAST>;
+    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::Bcast<Backend>(
         buffer, count, root, comm.template GetComm<Backend>(syncInfo));
 }

@@ -27,6 +27,44 @@ namespace El
 {
 namespace mpi
 {
+namespace internal
+{
+template <>
+SyncInfo<Device::CPU> GetNewCommunicationSyncInfo<Device::CPU>()
+{
+    static SyncInfo<Device::CPU> si_;
+    return si_;
+}
+
+namespace
+{
+struct SyncInfoRAII
+{
+    SyncInfoRAII()
+    {
+        H_CHECK_CUDA(cudaStreamCreateWithFlags(&held_.stream_, cudaStreamNonBlocking));
+        H_CHECK_CUDA(cudaEventCreateWithFlags(&held_.event_, cudaEventDisableTiming));
+    }
+    ~SyncInfoRAII()
+    {
+        //cudaEventDestroy(held_.event_);
+        //cudaStreamDestroy(held_.stream_);
+    }
+
+    SyncInfo<Device::GPU> const& operator()() const noexcept {return held_;}
+
+    SyncInfo<Device::GPU> held_;
+};
+}
+
+template <>
+SyncInfo<Device::GPU> GetNewCommunicationSyncInfo<Device::GPU>()
+{
+    static std::vector<SyncInfoRAII> si_vec_;
+    si_vec_.emplace_back();
+    return si_vec_.back()();
+}
+}// namespace internal
 
 const int ANY_SOURCE = MPI_ANY_SOURCE;
 const int ANY_TAG = MPI_ANY_TAG;

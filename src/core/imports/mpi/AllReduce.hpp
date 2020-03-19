@@ -18,6 +18,7 @@ void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
     if (count == 0)
         return;
 
+    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::Allreduce<Backend>(
         sbuf, rbuf, count, MPI_Op2ReductionOperator(AlNativeOp<T>(op)),
         comm.template GetComm<Backend>(syncInfo));
@@ -132,6 +133,7 @@ void AllReduce(T* buf, int count, Op op, Comm const& comm,
     if (count == 0)
         return;
 
+    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::Allreduce<Backend>(
         buf, count, MPI_Op2ReductionOperator(AlNativeOp<T>(op)),
         comm.template GetComm<Backend>(syncInfo));

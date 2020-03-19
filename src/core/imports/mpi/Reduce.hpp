@@ -14,6 +14,7 @@ void Reduce(T const* sbuf, T* rbuf, int count, Op op,
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::REDUCE>;
+    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::Reduce<Backend>(
         sbuf, rbuf, count, MPI_Op2ReductionOperator(AlNativeOp<T>(op)),
         root, comm.template GetComm<Backend>(syncInfo));

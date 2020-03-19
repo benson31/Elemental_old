@@ -20,6 +20,18 @@ namespace mpi
 namespace internal
 {
 
+template <Device D>
+SyncInfo<D> GetNewCommunicationSyncInfo();
+
+template <typename BackendT>
+auto GetBackendSyncInfo()
+    -> SyncInfo<DeviceForBackend<BackendT>()> const&
+{
+    constexpr Device D = DeviceForBackend<BackendT>();
+    static SyncInfo<D> si_ = GetNewCommunicationSyncInfo<D>();
+    return si_;
+}
+
 /** @class SharedPtrCommTupleT
  *  @brief A tuple of shared_ptrs to comms
  *
@@ -157,7 +169,7 @@ public:
      */
     template <typename BackendT, Device D>
     typename BackendT::comm_type /*const*/&
-    GetComm(SyncInfo<D> const& syncinfo) const
+    GetComm(SyncInfo<D> const& syncinfo_in) const
     {
         using comm_type = typename BackendT::comm_type;
 
@@ -166,8 +178,13 @@ public:
 
         auto& comm_map = std::get<idx>(al_comms_);
 
-        using value_type =
-            typename std::decay<decltype(comm_map)>::type::value_type;
+        // Single-stream communication
+        auto const& syncinfo = internal::GetBackendSyncInfo<BackendT>();
+        //auto multisync = MakeMultiSync(syncinfo_in, syncinfo);
+
+        using map_type_raw = decltype(comm_map);
+        using map_type = typename std::decay<map_type_raw>::type;
+        using value_type = typename map_type::value_type;
         auto it = std::find_if(
             std::begin(comm_map), std::end(comm_map),
             [&syncinfo](value_type const& x)

@@ -15,6 +15,7 @@ void Scatter(
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::GATHER>;
+    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::Scatter<Backend>(sbuf, rbuf, sc, root,
                          comm.template GetComm<Backend>(syncInfo));
 }
