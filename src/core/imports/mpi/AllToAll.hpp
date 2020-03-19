@@ -16,7 +16,6 @@ void AllToAll(T const* sbuf, int /*sc*/, T* rbuf, int rc, Comm const& comm,
         return;
 
     using Backend = BestBackend<T,D,Collective::ALLTOALL>;
-    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::Alltoall<Backend>(
         sbuf, rbuf, rc, comm.template GetComm<Backend>(syncInfo));
 }

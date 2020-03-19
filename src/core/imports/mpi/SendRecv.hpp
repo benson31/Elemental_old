@@ -15,7 +15,6 @@ void SendRecv(const T* sbuf, int sc, int to,
     EL_DEBUG_CSE;
 
     using Backend = BestBackend<T,D,Collective::SENDRECV>;
-    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::SendRecv<Backend>(
         sbuf, sc, to, rbuf, rc, from,
         comm.template GetComm<Backend>(syncInfo));
@@ -29,7 +28,6 @@ void SendRecv(T* buf, int count, int to, int from, Comm const& comm,
     EL_DEBUG_CSE;
 
     using Backend = BestBackend<T,D,Collective::SENDRECV>;
-    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     // Not sure if Al is ok with this bit
     Al::SendRecv<Backend>(
         buf, count, to, buf, count, from,

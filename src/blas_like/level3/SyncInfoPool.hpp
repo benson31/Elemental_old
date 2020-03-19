@@ -4,6 +4,13 @@
 #include "hydrogen/Device.hpp"
 #include "hydrogen/SyncInfo.hpp"
 
+#ifdef HYDROGEN_HAVE_NVPROF
+#include "nvToolsExt.h"
+#include "nvToolsExtCuda.h"
+#include "nvToolsExtCudaRt.h"
+#include "cuda_runtime.h"
+#endif // HYDROGEN_HAVE_NVPROF
+
 namespace hydrogen
 {
 
@@ -165,7 +172,8 @@ void SyncInfoPool<Device::GPU>::EnsureSize(size_t pool_size)
         Size() == 0UL ? 0UL : std::distance(pool_.cbegin(), pos_);
 
     pool_.reserve(pool_size);
-    size_t new_elements = pool_size - this->Size();
+    size_t const start_size = this->Size();
+    size_t const new_elements = pool_size - start_size;
     for (auto ii = 0UL; ii < new_elements; ++ii)
     {
         cudaStream_t stream;
@@ -176,6 +184,12 @@ void SyncInfoPool<Device::GPU>::EnsureSize(size_t pool_size)
         H_CHECK_CUDA(
             cudaEventCreateWithFlags(
                 &event, cudaEventDisableTiming));
+#ifdef HYDROGEN_HAVE_NVPROF
+        // Name the stream for debugging purposes
+        std::string const stream_name
+            = "H: SP Stream " + std::to_string(start_size + ii);
+        nvtxNameCudaStreamA(stream, stream_name.c_str());
+#endif // HYDROGEN_HAVE_NVPROF
         pool_.emplace_back(stream, event);
     }
 

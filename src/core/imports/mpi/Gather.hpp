@@ -15,7 +15,6 @@ void Gather(
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::GATHER>;
-    auto multisync = MakeMultiSync(internal::GetBackendSyncInfo<Backend>(), syncInfo);
     Al::Gather<Backend>(
         sbuf, rbuf, sc, root, comm.template GetComm<Backend>(syncInfo));
 }
