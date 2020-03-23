@@ -78,7 +78,7 @@ void SUMMA_NNA_impl_multistream(
     Int k = 0;
     while (k < n)
     {
-        Int k_start = k;
+        Int const k_start = k;
 
         // Launch everything up through the GEMM
         for (size_t blk = 0UL; blk < num_streams && k < n; ++blk, k+=bsize)
@@ -113,9 +113,8 @@ void SUMMA_NNA_impl_multistream(
             const Int nb = Min(bsize,n-k);
             auto C1 = C(ALL, IR(k,k+nb));
             auto& DMCSTAR = D1_MC_STAR[blk];
-            auto const& the_stream =
-                SyncInfoFromMatrix(DMCSTAR.LockedMatrix());
-            SetSyncInfo(C1.Matrix(), the_stream);
+            SetSyncInfo(C1.Matrix(),
+                        SyncInfoFromMatrix(DMCSTAR.LockedMatrix()));
 
             // C1[MC,MR] += scattered result of D1[MC,*] summed over grid rows
             AxpyContract(TypeTraits<T>::One(), DMCSTAR, C1);

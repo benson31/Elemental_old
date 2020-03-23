@@ -20,10 +20,10 @@ void SUMMA_NTA_impl_multistream(
         "SUMMA.NTA.multistream",
         SyncInfo_C);
 
-    const Int n = CPre.Width();
-    const Int bsize = Blocksize();
-    const Grid& g = APre.Grid();
-    const bool conjugate = (orientB == ADJOINT);
+    Int const n = CPre.Width();
+    Int const bsize = Blocksize();
+    Grid const& g = APre.Grid();
+    bool const conjugate = (orientB == ADJOINT);
     auto const num_blocks = (n + bsize - 1) / bsize;
 
     DistMatrixReadProxy<T,T,MC,MR,ELEMENT,D> AProx(APre);
@@ -40,7 +40,7 @@ void SUMMA_NTA_impl_multistream(
 
     // Get the sync pool.
     auto const& stream_pool = GetSyncInfoPool(C.Grid());
-    auto const num_stream_teams =
+    auto const num_streams =
         stream_pool.Size() == 1UL
         ? 1UL
         : std::min(stream_pool.Size(), size_t(num_blocks));
@@ -49,11 +49,11 @@ void SUMMA_NTA_impl_multistream(
     std::vector<DistMatrix<T,MR,STAR,ELEMENT,D>> B1Trans_MR_STAR;
     std::vector<DistMatrix<T,MC,STAR,ELEMENT,D>> D1_MC_STAR;
 
-    B1Trans_MR_STAR.reserve(num_stream_teams);
-    D1_MC_STAR.reserve(num_stream_teams);
+    B1Trans_MR_STAR.reserve(num_streams);
+    D1_MC_STAR.reserve(num_streams);
 
     // Setup temporaries
-    for (auto id = 0UL; id < num_stream_teams; ++id)
+    for (auto id = 0UL; id < num_streams; ++id)
     {
         auto B1T = B1Trans_MR_STAR.emplace(B1Trans_MR_STAR.end(), g);
         auto D1 = D1_MC_STAR.emplace(D1_MC_STAR.end(), g);
@@ -69,36 +69,44 @@ void SUMMA_NTA_impl_multistream(
         AddSynchronizationPoint(SyncInfo_C, the_stream);
     }
 
-    size_t team_id = 0UL;
-    for(Int k=0; k<n; k+=bsize)
+    Int k = 0;
+    while (k < n)
     {
-        DistMatrix<T,MC,MR,ELEMENT,D> A1(g);
-        LockedView(A1, A);
+        Int const k_start = k;
 
-        const Int nb = Min(bsize,n-k);
+        k = k_start;
+        for (size_t blk = 0UL; blk < num_streams && k < n; ++blk, k+=bsize)
+        {
+            DistMatrix<T,MC,MR,ELEMENT,D> A1(g);
+            LockedView(A1, A);
 
-        auto B1 = B(IR(k,k+nb), ALL       );
-        auto C1 = C(ALL,        IR(k,k+nb));
+            Int const nb = Min(bsize,n-k);
+            auto B1 = B(IR(k,k+nb), ALL       );
+            auto& BTMRSTAR = B1Trans_MR_STAR[blk];
+            auto& DMCSTAR = D1_MC_STAR[blk];
 
-        auto& BTMRSTAR = B1Trans_MR_STAR[team_id];
-        auto& DMCSTAR = D1_MC_STAR[team_id];
+            SetSyncInfo(A1.Matrix(), SyncInfoFromMatrix(DMCSTAR.Matrix()));
+            SetSyncInfo(B1.Matrix(), SyncInfoFromMatrix(BTMRSTAR.Matrix()));
 
-        auto const& the_stream =
-            SyncInfoFromMatrix(DMCSTAR.Matrix());
+            Transpose(B1, BTMRSTAR, conjugate);
 
-        SetSyncInfo(A1.Matrix(), the_stream);
-        SetSyncInfo(B1.Matrix(), the_stream);
-        SetSyncInfo(C1.Matrix(), the_stream);
+            // C1[MC,*] := alpha A[MC,MR] (B1^[T/H])[MR,*]
+            LocalGemm(NORMAL, NORMAL, alpha, A1, BTMRSTAR, DMCSTAR);
+        }
 
-        // C1[MC,*] := alpha A[MC,MR] (B1^[T/H])[MR,*]
-        Transpose(B1, BTMRSTAR, conjugate);
-        LocalGemm(NORMAL, NORMAL, alpha, A1, BTMRSTAR, DMCSTAR);
+        k = k_start;
 
-        // C1[MC,MR] += scattered result of D1[MC,*] summed over grid rows
-        AxpyContract(TypeTraits<T>::One(), DMCSTAR, C1);
+        // Launch the final communications
+        for (size_t blk = 0UL; blk < num_streams && k < n; ++blk, k+=bsize)
+        {
+            Int const nb = Min(bsize,n-k);
+            auto C1 = C(ALL,        IR(k,k+nb));
+            auto& DMCSTAR = D1_MC_STAR[blk];
+            SetSyncInfo(C1.Matrix(), SyncInfoFromMatrix(DMCSTAR.Matrix()));
 
-        // Bookkeeping.
-        team_id = (team_id + 1) % num_stream_teams;
+            // C1[MC,MR] += scattered result of D1[MC,*] summed over grid rows
+            AxpyContract(TypeTraits<T>::One(), DMCSTAR, C1);
+        }
     }
 
     // Have C wait on all streams
@@ -286,46 +294,45 @@ void SUMMA_NTC_impl_multistream(
 
         // Get the sync pool.
     auto const& stream_pool = GetSyncInfoPool(C.Grid());
-    auto const num_stream_teams =
+    auto const num_streams =
         stream_pool.Size() == 1UL
         ? 1UL
-        : std::min(stream_pool.Size() / 2, size_t(num_blocks));
+        : std::min(stream_pool.Size(), size_t(num_blocks));
 
-    A1_MC_STAR.reserve(num_stream_teams);
-    B1_VR_STAR.reserve(num_stream_teams);
-    B1Trans_STAR_MR.reserve(num_stream_teams);
-    C_TMP.reserve(num_stream_teams);
+    A1_MC_STAR.reserve(num_streams);
+    B1_VR_STAR.reserve(num_streams);
+    B1Trans_STAR_MR.reserve(num_streams);
+    C_TMP.reserve(num_streams);
 
-    for (auto id = 0UL; id < num_stream_teams; ++id)
+    for (auto id = 0UL; id < num_streams; ++id)
     {
         auto A1 = A1_MC_STAR.emplace(A1_MC_STAR.end(), g);
         auto B1 = B1_VR_STAR.emplace(B1_VR_STAR.end(), g);
         auto B1T = B1Trans_STAR_MR.emplace(B1Trans_STAR_MR.end(), g);
         auto C1 = C_TMP.emplace(C_TMP.end(), g);
 
-        auto const& stream_one = stream_pool.Next();
-        auto const& stream_two = stream_pool.Next();
+        auto const& the_stream = stream_pool.Next();
 
         A1->AlignWith(C);
         B1->AlignWith(C);
         B1T->AlignWith(C);
 
-        SetSyncInfo(A1->Matrix(), stream_one);
-        SetSyncInfo(B1->Matrix(), stream_two);
-        SetSyncInfo(B1T->Matrix(), stream_two);
+        SetSyncInfo(A1->Matrix(), the_stream);
+        SetSyncInfo(B1->Matrix(), the_stream);
+        SetSyncInfo(B1T->Matrix(), the_stream);
 
-        AddSynchronizationPoint(SyncInfo_C, stream_one);
-        AddSynchronizationPoint(SyncInfo_C, stream_two);
+        AddSynchronizationPoint(SyncInfo_C, the_stream);
+        AddSynchronizationPoint(SyncInfo_C, the_stream);
 
         if (id == 0UL)
         {
             View(*C1, C);
-            SetSyncInfo(C1->Matrix(), stream_two);
+            SetSyncInfo(C1->Matrix(), the_stream);
         }
         else
         {
             C1->AlignWith(C);
-            SetSyncInfo(C1->Matrix(), stream_two);
+            SetSyncInfo(C1->Matrix(), the_stream);
             Zeros(*C1, C.Height(), C.Width());
         }
     }
@@ -342,13 +349,11 @@ void SUMMA_NTC_impl_multistream(
         auto& BTSTARMR = B1Trans_STAR_MR[team_id];
         auto& CView = C_TMP[team_id];
 
-        auto const& stream_one =
+        auto const& the_stream =
             SyncInfoFromMatrix(AMCSTAR.Matrix());
-        auto const& stream_two =
-            SyncInfoFromMatrix(CView.Matrix());
 
-        SetSyncInfo(A1.Matrix(), stream_one);
-        SetSyncInfo(B1.Matrix(), stream_two);
+        SetSyncInfo(A1.Matrix(), the_stream);
+        SetSyncInfo(B1.Matrix(), the_stream);
 
         AMCSTAR = A1;
         BVRSTAR = B1;
@@ -361,7 +366,7 @@ void SUMMA_NTC_impl_multistream(
             TypeTraits<T>::One(), CView);
 
         // Bookkeeping.
-        team_id = (team_id + 1) % num_stream_teams;
+        team_id = (team_id + 1) % num_streams;
     }
 
     AddSynchronizationPoint(SyncInfoFromMatrix(C_TMP.front().LockedMatrix()),
