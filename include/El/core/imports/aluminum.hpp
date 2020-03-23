@@ -5,6 +5,13 @@
 
 #ifdef HYDROGEN_HAVE_ALUMINUM
 #include <Al.hpp>
+
+#ifdef HYDROGEN_HAVE_NVPROF
+#include "nvToolsExt.h"
+#include "nvToolsExtCuda.h"
+#include "nvToolsExtCudaRt.h"
+#endif // HYDROGEN_HAVE_NVPROF
+
 #endif // HYDROGEN_HAVE_ALUMINUM
 
 namespace El
@@ -250,7 +257,7 @@ struct SyncInfoManager<Device::CPU>
 template <>
 struct SyncInfoManager<Device::GPU>
 {
-    SyncInfoManager()
+    SyncInfoManager(std::string const& backend_name)
     {
         H_CHECK_CUDA(
             cudaEventCreateWithFlags(&si_.event_, cudaEventDisableTiming));
@@ -259,8 +266,8 @@ struct SyncInfoManager<Device::GPU>
 #ifdef HYDROGEN_HAVE_NVPROF
         // Name the stream for debugging purposes
         std::string const stream_name
-            = "H: Comm Stream " + BackendT::Name();
-        nvtxNameCudaStreamA(stream, stream_name.c_str());
+            = "H: Comm (" + backend_name + ")";
+        nvtxNameCudaStreamA(si_.stream_, stream_name.c_str());
 #endif // HYDROGEN_HAVE_NVPROF
     }
     ~SyncInfoManager()
@@ -304,7 +311,7 @@ template <typename BackendT>
 SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
 {
     constexpr Device D = DeviceForBackend<BackendT>();
-    static SyncInfoManager<D> si_mgr_;
+    static SyncInfoManager<D> si_mgr_(BackendT::Name());
     return si_mgr_.si_;
 }
 

@@ -187,7 +187,7 @@ void SyncInfoPool<Device::GPU>::EnsureSize(size_t pool_size)
 #ifdef HYDROGEN_HAVE_NVPROF
         // Name the stream for debugging purposes
         std::string const stream_name
-            = "H: SP Stream " + std::to_string(start_size + ii);
+            = "H: SP (" + std::to_string(start_size + ii) + ")";
         nvtxNameCudaStreamA(stream, stream_name.c_str());
 #endif // HYDROGEN_HAVE_NVPROF
         pool_.emplace_back(stream, event);
