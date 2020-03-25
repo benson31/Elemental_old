@@ -16,7 +16,8 @@
 
 namespace El
 {
-void break_on_me();
+// "Real" declaration is in include/El/core/environment/impl.hpp
+extern void break_on_me();
 
 // FIXME: This is a lame shortcut to save some
 // metaprogramming. Deadlines are the worst.
