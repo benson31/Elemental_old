@@ -251,6 +251,9 @@ struct SyncInfoManager;
 template <>
 struct SyncInfoManager<Device::CPU>
 {
+    SyncInfoManager(std::string const&)
+    {}
+
     SyncInfo<Device::CPU> si_;
 };
 
@@ -269,6 +272,8 @@ struct SyncInfoManager<Device::GPU>
         std::string const stream_name
             = "H: Comm (" + backend_name + ")";
         nvtxNameCudaStreamA(si_.stream_, stream_name.c_str());
+#else
+        (void) backend_name;
 #endif // HYDROGEN_HAVE_NVPROF
     }
     ~SyncInfoManager()
