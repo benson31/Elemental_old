@@ -14,8 +14,8 @@ void AllGather(
 {
     EL_DEBUG_CSE;
     using Backend = BestBackend<T,D,Collective::ALLGATHER>;
-    Al::Allgather<Backend>(
-        sbuf, rbuf, sc, comm.template GetComm<Backend>(syncInfo));
+    auto al_comm = comm.template GetComm<Backend>(syncInfo);
+    Al::Allgather<Backend>(sbuf, rbuf, sc, al_comm);
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 

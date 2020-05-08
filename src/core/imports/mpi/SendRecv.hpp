@@ -15,9 +15,8 @@ void SendRecv(const T* sbuf, int sc, int to,
     EL_DEBUG_CSE;
 
     using Backend = BestBackend<T,D,Collective::SENDRECV>;
-    Al::SendRecv<Backend>(
-        sbuf, sc, to, rbuf, rc, from,
-        comm.template GetComm<Backend>(syncInfo));
+    auto al_comm = comm.template GetComm<Backend>(syncInfo);
+    Al::SendRecv<Backend>(sbuf, sc, to, rbuf, rc, from, al_comm);
 }
 
 template <typename T, Device D,

@@ -16,8 +16,8 @@ void Broadcast(T* buffer, int count, int root, Comm const& comm,
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::BROADCAST>;
-    Al::Bcast<Backend>(
-        buffer, count, root, comm.template GetComm<Backend>(syncInfo));
+    auto al_comm = comm.template GetComm<Backend>(syncInfo);
+    Al::Bcast<Backend>(buffer, count, root, al_comm);
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 

@@ -46,9 +46,10 @@ void ReduceScatter(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
         return LocalCopy(sbuf, rbuf, count, syncInfo);
 
     using Backend = BestBackend<T,D,Collective::REDUCESCATTER>;
+    auto al_comm = comm.template GetComm<Backend>(syncInfo);
     Al::Reduce_scatter<Backend>(
         sbuf, rbuf, count, MPI_Op2ReductionOperator(AlNativeOp<T>(op)),
-        comm.template GetComm<Backend>(syncInfo));
+        al_comm);
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
@@ -157,9 +158,10 @@ void ReduceScatter(T* buf, int count, Op op, Comm const& comm,
         return;
 
     using Backend = BestBackend<T,D,Collective::REDUCESCATTER>;
+    auto al_comm = comm.template GetComm<Backend>(syncInfo);
     Al::Reduce_scatter<Backend>(
         buf, count, MPI_Op2ReductionOperator(AlNativeOp<T>(op)),
-        comm.template GetComm<Backend>(syncInfo));
+        al_comm);
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 

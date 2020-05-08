@@ -15,8 +15,8 @@ void Scatter(
     EL_DEBUG_CSE
 
     using Backend = BestBackend<T,D,Collective::GATHER>;
-    Al::Scatter<Backend>(sbuf, rbuf, sc, root,
-                         comm.template GetComm<Backend>(syncInfo));
+    auto al_comm = comm.template GetComm<Backend>(syncInfo);
+    Al::Scatter<Backend>(sbuf, rbuf, sc, root, al_comm);
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 

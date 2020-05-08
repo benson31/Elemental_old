@@ -18,9 +18,10 @@ void AllReduce(T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,
     if (count == 0)
         return;
 
+    auto al_comm = comm.template GetComm<Backend>(syncInfo);
     Al::Allreduce<Backend>(
         sbuf, rbuf, count, MPI_Op2ReductionOperator(AlNativeOp<T>(op)),
-        comm.template GetComm<Backend>(syncInfo));
+        al_comm);
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
@@ -132,9 +133,10 @@ void AllReduce(T* buf, int count, Op op, Comm const& comm,
     if (count == 0)
         return;
 
+    auto al_comm = comm.template GetComm<Backend>(syncInfo);
     Al::Allreduce<Backend>(
         buf, count, MPI_Op2ReductionOperator(AlNativeOp<T>(op)),
-        comm.template GetComm<Backend>(syncInfo));
+        al_comm);
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 

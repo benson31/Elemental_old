@@ -16,8 +16,8 @@ void AllToAll(T const* sbuf, int /*sc*/, T* rbuf, int rc, Comm const& comm,
         return;
 
     using Backend = BestBackend<T,D,Collective::ALLTOALL>;
-    Al::Alltoall<Backend>(
-        sbuf, rbuf, rc, comm.template GetComm<Backend>(syncInfo));
+    auto al_comm = comm.template GetComm<Backend>(syncInfo);
+    Al::Alltoall<Backend>(sbuf, rbuf, rc, al_comm);
 }
 #endif // HYDROGEN_HAVE_ALUMINUM
 
