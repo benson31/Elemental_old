@@ -88,10 +88,16 @@ template <BLAS_Op op>
 struct IsSupportedType_Base<float, op> : std::true_type {};
 template <BLAS_Op op>
 struct IsSupportedType_Base<double, op> : std::true_type {};
+
 template <>
-struct IsSupportedType_Base<float,BLAS_Op::DGMM> : std::false_type {};
-template <>
-struct IsSupportedType_Base<double,BLAS_Op::DGMM> : std::false_type {};
+struct IsSupportedType_Base<rocblas_float_complex, BLAS_Op::Herk>
+    : std::true_type {};
+struct IsSupportedType_Base<rocblas_double_complex, BLAS_Op::Herk>
+    : std::true_type {};
+struct IsSupportedType_Base<rocblas_float_complex, BLAS_Op::Syrk>
+    : std::true_type {};
+struct IsSupportedType_Base<rocblas_double_complex, BLAS_Op::Syrk>
+    : std::true_type {};
 
 #ifdef HYDROGEN_GPU_USE_FP16
 template <>
