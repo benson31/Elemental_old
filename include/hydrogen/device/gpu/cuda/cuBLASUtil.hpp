@@ -66,6 +66,21 @@ ToNativeSideMode(SideMode const& side) noexcept
     return CUBLAS_SIDE_RIGHT;
 }
 
+inline cublasFillMode_t
+ToNativeFillMode(FillMode const& uplo) noexcept
+{
+    switch (uplo)
+    {
+    case FillMode::UPPER_TRIANGLE:
+        return CUBLAS_FILL_MODE_UPPER;
+    case FillMode::LOWER_TRIANGLE:
+        return CUBLAS_FILL_MODE_LOWER;
+    case FillMode::FULL:
+        return CUBLAS_FILL_MODE_FULL;
+    }
+    return CUBLAS_FILL_MODE_FULL;
+}
+
 }// namespace cublas
 }// namespace hydrogen
 #endif // HYDROGEN_DEVICE_GPU_CUDA_CUBLASUTIL_HPP_

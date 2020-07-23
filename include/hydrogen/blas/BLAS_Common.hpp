@@ -21,8 +21,10 @@ enum class BLAS_Op
     GEMM,
     GEMMSTRIDEDBATCHED,
     GEMV,
+    HERK,
     NRM2,
     SCAL,
+    SYRK,
     /** @brief Axpy for 2D data with leading dimension */
     AXPY2D,
     /** @brief Copy for 2D data with leading dimension */
@@ -32,6 +34,42 @@ enum class BLAS_Op
     /** @brief In-place scale for 2D data with leading dimension */
     SCALE2D,
 };
+
+/** @brief Describes the fill mode for BLAS. */
+enum class FillMode
+{
+    UPPER_TRIANGLE,
+    LOWER_TRIANGLE,
+    FULL,
+};
+
+inline char FillModeToChar(FillMode mode)
+{
+    switch (mode)
+    {
+    case FillMode::UPPER_TRIANGLE:
+        return 'U';
+    case FillMode::LOWER_TRIANGLE:
+        return 'L';
+    case FillMode::FULL:
+        return 'F';
+    }
+    return 'F';
+}
+
+inline FillMode CharToFillMode(char c)
+{
+    switch (c)
+    {
+    case 'U':
+        return FillMode::UPPER_TRIANGLE;
+    case 'L':
+        return FillMode::LOWER_TRIANGLE;
+    case 'F':
+        return FillMode::FULL;
+    }
+    throw std::logic_error("Bad char");
+}
 
 /** @brief Describes transpose operations for BLAS. */
 enum class TransposeMode

@@ -200,6 +200,42 @@ using RealType = typename RealTypeT<T>::type;
 //
 // BLAS 3
 //
+#define ADD_HERK_IMPL(ScalarType, BaseScalarType, TypeChar)     \
+    void Herk(                                                  \
+        cublasHandle_t handle,                                  \
+        cublasFillMode_t uplo, cublasOperation_t trans,         \
+        int n, int k,                                           \
+        BaseScalarType const& alpha,                            \
+        ScalarType const* A, int lda,                           \
+        BaseScalarType const& beta,                             \
+        ScalarType * C, int ldc)                                \
+    {                                                           \
+        H_CHECK_CUBLAS(                                         \
+            cublas ## TypeChar ## herk(                         \
+                handle,                                         \
+                uplo, trans,                                    \
+                n, k,                                           \
+                &alpha, A, lda, &beta, C, ldc));                  \
+    }
+
+#define ADD_SYRK_IMPL(ScalarType, TypeChar)             \
+    void Syrk(                                          \
+        cublasHandle_t handle,                          \
+        cublasFillMode_t uplo, cublasOperation_t trans, \
+        int n, int k,                                   \
+        ScalarType const& alpha,                        \
+        ScalarType const* A, int lda,                   \
+        ScalarType const& beta,                         \
+        ScalarType* C, int ldc)                         \
+    {                                                   \
+        H_CHECK_CUBLAS(                                 \
+            cublas ## TypeChar ## syrk(                 \
+                handle,                                 \
+                uplo, trans,                            \
+                n, k,                                   \
+                &alpha, A, lda, &beta, C, ldc));        \
+    }
+
 #define ADD_GEMM_IMPL(ScalarType, TypeChar)             \
     void Gemm(                                          \
         cublasHandle_t handle,                          \
@@ -320,6 +356,14 @@ ADD_GEMV_IMPL(cuComplex, C)
 ADD_GEMV_IMPL(cuDoubleComplex, Z)
 
 // BLAS 3
+ADD_HERK_IMPL(cuComplex, float, C)
+ADD_HERK_IMPL(cuDoubleComplex, double, Z)
+
+ADD_SYRK_IMPL(float, S)
+ADD_SYRK_IMPL(double, D)
+ADD_SYRK_IMPL(cuComplex, C)
+ADD_SYRK_IMPL(cuDoubleComplex, Z)
+
 ADD_GEMM_IMPL(__half, H)
 ADD_GEMM_IMPL(float, S)
 ADD_GEMM_IMPL(double, D)

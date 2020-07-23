@@ -102,6 +102,26 @@ ADD_GEMV_DECL(cuDoubleComplex);
 /** @name BLAS-3 Routines */
 ///@{
 
+#define ADD_HERK_DECL(ScalarType, BaseScalarType)               \
+    void Herk(                                                  \
+        cublasHandle_t handle,                                  \
+        cublasFillMode_t uplo, cublasOperation_t trans,         \
+        int n, int k,                                           \
+        BaseScalarType const& alpha,                            \
+        ScalarType const* A, int lda,                           \
+        BaseScalarType const& beta,                             \
+        ScalarType * C, int ldc)
+
+#define ADD_SYRK_DECL(ScalarType)                       \
+    void Syrk(                                          \
+        cublasHandle_t handle,                          \
+        cublasFillMode_t uplo, cublasOperation_t trans, \
+        int n, int k,                                   \
+        ScalarType const& alpha,                        \
+        ScalarType const* A, int lda,                   \
+        ScalarType const& beta,                         \
+        ScalarType* C, int ldc)
+
 #define ADD_GEMM_DECL(ScalarType)               \
     void Gemm(                                  \
         cublasHandle_t handle,                  \
@@ -129,6 +149,14 @@ ADD_GEMV_DECL(cuDoubleComplex);
         ScalarType* C, int ldc,                         \
         long long int strideC,                          \
         int batchCount)
+
+ADD_HERK_DECL(cuComplex, float);
+ADD_HERK_DECL(cuDoubleComplex, double);
+
+ADD_SYRK_DECL(float);
+ADD_SYRK_DECL(double);
+ADD_SYRK_DECL(cuComplex);
+ADD_SYRK_DECL(cuDoubleComplex);
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ADD_GEMM_DECL(__half);

@@ -21,6 +21,25 @@
 
 namespace hydrogen
 {
+namespace details
+{
+template <typename T>
+struct BaseT
+{
+    using type = T;
+};
+
+// Ehhhhh this is certainly not fool-proof... But I don't want to
+// include all the El::Complex stuff here.
+template <template <typename> class AugmentedT, typename T>
+struct BaseT<AugmentedT<T>>
+{
+    using type = T;
+};
+}// namespace details
+
+template <typename T>
+using TmpBase = typename details::BaseT<T>::type;
 
 /** @namespace gpu_blas
  *  @brief A collection of BLAS routines that are exposed for GPUs
@@ -391,6 +410,32 @@ void Gemv(
 ///@}
 /** @name BLAS-3 Routines */
 ///@{
+
+/** @brief Hermitian rank-K update of matrices in GPU memory.
+ *  @todo Finish documentation.
+ */
+template <typename T, typename SizeT>
+void Herk(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    TmpBase<T> const& alpha,
+    T const* A, SizeT lda,
+    TmpBase<T> const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo);
+
+/** @brief Symmetric rank-K update of matrices in GPU memory.
+ *  @todo Finish documentation.
+ */
+template <typename T, typename SizeT>
+void Syrk(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo);
 
 /** @brief Matrix-matrix product in GPU memory.
  *

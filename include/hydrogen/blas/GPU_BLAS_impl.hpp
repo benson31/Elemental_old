@@ -60,6 +60,7 @@ using gpu_blas_impl::GetLibraryHandle;
 using gpu_blas_impl::IsSupportedType;
 using gpu_blas_impl::NativeType;
 using gpu_blas_impl::SyncManager;
+using gpu_blas_impl::ToNativeFillMode;
 using gpu_blas_impl::ToNativeSideMode;
 using gpu_blas_impl::ToNativeTransposeMode;
 
@@ -272,6 +273,56 @@ void GemvImpl(
         reinterpret_cast<CNTP>(x), ToSizeT(incx),
         beta,
         reinterpret_cast<NTP>(y), ToSizeT(incy));
+}
+
+template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::HERK>>>
+void HerkImpl(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    TmpBase<T> const& alpha,
+    T const* A, SizeT lda,
+    TmpBase<T> const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), syncinfo);
+    gpu_blas_impl::Herk(
+        GetLibraryHandle(),
+        ToNativeFillMode(uplo), ToNativeTransposeMode(trans),
+        ToSizeT(n), ToSizeT(k),
+        alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda),
+        beta,
+        reinterpret_cast<NTP>(C), ToSizeT(ldc));
+}
+
+template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::SYRK>>>
+void SyrkImpl(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), syncinfo);
+    gpu_blas_impl::Syrk(
+        GetLibraryHandle(),
+        ToNativeFillMode(uplo), ToNativeTransposeMode(trans),
+        ToSizeT(n), ToSizeT(k),
+        alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda),
+        beta,
+        reinterpret_cast<NTP>(C), ToSizeT(ldc));
 }
 
 template <typename T, typename SizeT,
@@ -537,6 +588,42 @@ void GemvImpl(
 }
 
 template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::HERK>>,
+          typename=void>
+void HerkImpl(
+    FillMode const, TransposeMode const,
+    SizeT const, SizeT const,
+    TmpBase<T> const& ,
+    T const* const, SizeT const,
+    TmpBase<T> const& ,
+    T* const, SizeT const,
+    SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of HERK for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::SYRK>>,
+          typename=void>
+void SyrkImpl(
+    FillMode const, TransposeMode const,
+    SizeT const, SizeT const,
+    T const&,
+    T const* const, SizeT const,
+    T const&,
+    T* const, SizeT const,
+    SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of SYRK for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT,
           typename=EnableUnless<IsSupportedType<T,BLAS_Op::GEMM>>,
           typename=void>
 void GemmImpl(
@@ -693,6 +780,40 @@ void Gemv(
 //
 // BLAS 3 Routines
 //
+
+template <typename T, typename SizeT>
+void Herk(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    TmpBase<T> const& alpha,
+    T const* A, SizeT lda,
+    TmpBase<T> const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    details::HerkImpl(uplo, trans,
+                      n, k,
+                      alpha, A, lda,
+                      beta, C, ldc,
+                      syncinfo);
+}
+
+template <typename T, typename SizeT>
+void Syrk(
+    FillMode uplo, TransposeMode trans,
+    SizeT n, SizeT k,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T const& beta,
+    T* C, SizeT ldc,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    details::SyrkImpl(uplo, trans,
+                      n, k,
+                      alpha, A, lda,
+                      beta, C, ldc,
+                      syncinfo);
+}
 
 template <typename T, typename SizeT>
 void Gemm(
