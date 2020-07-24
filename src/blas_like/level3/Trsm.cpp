@@ -22,16 +22,32 @@
 
 namespace El {
 
+#ifdef HYDROGEN_HAVE_GPU
 template<typename F>
-void Trsm
-( LeftOrRight side,
-  UpperOrLower uplo,
-  Orientation orientation,
-  UnitOrNonUnit diag,
-  F alpha,
-  const Matrix<F>& A,
-        Matrix<F>& B,
-  bool checkIfSingular )
+void Trsm(
+    LeftOrRight side,
+    UpperOrLower uplo,
+    Orientation orientation,
+    UnitOrNonUnit diag,
+    F alpha,
+    Matrix<F, Device::GPU> const& A,
+    Matrix<F, Device::GPU>& B,
+    bool checkIfSingular)
+{
+    RuntimeError("GPU impl not done yet.");
+}
+#endif // HYDROGEN_HAVE_GPU
+
+template<typename F>
+void Trsm(
+    LeftOrRight side,
+    UpperOrLower uplo,
+    Orientation orientation,
+    UnitOrNonUnit diag,
+    F alpha,
+    Matrix<F> const& A,
+    Matrix<F>& B,
+    bool checkIfSingular)
 {
     EL_DEBUG_CSE
     EL_DEBUG_ONLY(
@@ -62,6 +78,38 @@ void Trsm
     blas::Trsm
     ( sideChar, uploChar, transChar, diagChar, B.Height(), B.Width(),
       alpha, A.LockedBuffer(), A.LDim(), B.Buffer(), B.LDim() );
+}
+
+template <typename F>
+void Trsm(
+    LeftOrRight side,
+    UpperOrLower uplo,
+    Orientation orientation,
+    UnitOrNonUnit diag,
+    F alpha,
+    AbstractMatrix<F> const& A,
+    AbstractMatrix<F>& B,
+    bool checkIfSingular)
+{
+    switch (A.GetDevice())
+    {
+    case Device::CPU:
+        Trsm(side, uplo, orientation, diag,
+             alpha, static_cast<Matrix<F, Device::CPU> const&>(A),
+             static_cast<Matrix<F, Device::CPU>&>(B),
+             checkIfSingular);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        Trsm(side, uplo, orientation, diag,
+             alpha, static_cast<Matrix<F, Device::GPU> const&>(A),
+             static_cast<Matrix<F, Device::GPU>&>(B),
+             checkIfSingular);
+        break;
+#endif
+    default:
+        RuntimeError("Unknown device.");
+    }
 }
 
 // TODO: Make the TRSM_DEFAULT switching mechanism smarter (perhaps, empirical)

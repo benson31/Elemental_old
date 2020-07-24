@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El.hpp>
@@ -37,6 +37,7 @@ void Cholesky( UpperOrLower uplo, Matrix<F>& A )
         cholesky::UpperVariant3Blocked( A );
 }
 
+#ifdef HYDROGEN_ENABLE_PIVOTED_CHOLESKY
 template<typename F>
 void Cholesky( UpperOrLower uplo, Matrix<F>& A, Permutation& p )
 {
@@ -50,7 +51,9 @@ void Cholesky( UpperOrLower uplo, Matrix<F>& A, Permutation& p )
     else
         cholesky::PivotedUpperVariant3Blocked( A, p );
 }
+#endif // HYDROGEN_ENABLE_PIVOTED_CHOLESKY
 
+#ifdef HYDROGEN_ENABLE_REVERSE_CHOLESKY
 template<typename F>
 void ReverseCholesky( UpperOrLower uplo, Matrix<F>& A )
 {
@@ -64,6 +67,7 @@ void ReverseCholesky( UpperOrLower uplo, Matrix<F>& A )
     else
         cholesky::ReverseUpperVariant3Blocked( A );
 }
+#endif // HYDROGEN_ENABLE_REVERSE_CHOLESKY
 
 namespace cholesky {
 
@@ -92,7 +96,7 @@ void ScaLAPACKHelper( UpperOrLower uplo, AbstractDistMatrix<F>& A )
 
 } // anonymous namespace
 
-template<typename F> 
+template<typename F>
 void Cholesky( UpperOrLower uplo, AbstractDistMatrix<F>& A, bool scalapack )
 {
     EL_DEBUG_CSE
@@ -109,7 +113,8 @@ void Cholesky( UpperOrLower uplo, AbstractDistMatrix<F>& A, bool scalapack )
     }
 }
 
-template<typename F> 
+#ifdef HYDROGEN_ENABLE_PIVOTED_CHOLESKY
+template<typename F>
 void Cholesky
 ( UpperOrLower uplo, AbstractDistMatrix<F>& A, DistPermutation& p )
 {
@@ -119,13 +124,15 @@ void Cholesky
     else
         cholesky::PivotedUpperVariant3Blocked( A, p );
 }
+#endif // HYDROGEN_ENABLE_PIVOTED_CHOLESKY
 
 template<typename F>
 void Cholesky
 ( UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A )
 { Cholesky( uplo, A.Matrix() ); }
 
-template<typename F> 
+#ifdef HYDROGEN_ENABLE_REVERSE_CHOLESKY
+template<typename F>
 void ReverseCholesky( UpperOrLower uplo, AbstractDistMatrix<F>& A )
 {
     EL_DEBUG_CSE
@@ -139,8 +146,10 @@ template<typename F>
 void ReverseCholesky
 ( UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A )
 { ReverseCholesky( uplo, A.Matrix() ); }
+#endif // HYDROGEN_ENABLE_REVERSE_CHOLESKY
 
-// Either 
+#ifdef HYDROGEN_ENABLE_CHOLESKY_MOD
+// Either
 //         L' L'^H := L L^H + alpha V V^H
 // or
 //         U'^H U' := U^H U + alpha V V^H
@@ -159,7 +168,7 @@ void CholeskyMod( UpperOrLower uplo, Matrix<F>& T, Base<F> alpha, Matrix<F>& V )
 template<typename F>
 void CholeskyMod
 ( UpperOrLower uplo,
-  AbstractDistMatrix<F>& T, 
+  AbstractDistMatrix<F>& T,
   Base<F> alpha,
   AbstractDistMatrix<F>& V )
 {
@@ -202,7 +211,16 @@ void HPSDCholesky( UpperOrLower uplo, AbstractDistMatrix<F>& APre )
     else
         qr::ExplicitTriang( A );
 }
+#endif // HYDROGEN_ENABLE_CHOLESKY_MOD
 
+#define PROTO(F)                                                        \
+    template void Cholesky( UpperOrLower uplo, Matrix<F>& A );          \
+    template void Cholesky(                                             \
+        UpperOrLower uplo, AbstractDistMatrix<F>& A, bool scalapack );  \
+    template void Cholesky(                                             \
+        UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A );
+
+#ifdef HYDROGEN_ENABLE_ALL_CHOLESKY
 #define PROTO_BASE(F) \
   template void Cholesky( UpperOrLower uplo, Matrix<F>& A ); \
   template void Cholesky \
@@ -242,7 +260,7 @@ void HPSDCholesky( UpperOrLower uplo, AbstractDistMatrix<F>& APre )
   ( UpperOrLower uplo, Orientation orientation, \
     const AbstractDistMatrix<F>& A, \
     const DistPermutation& p, \
-          AbstractDistMatrix<F>& B ); 
+          AbstractDistMatrix<F>& B );
 
 #define PROTO(F) \
   PROTO_BASE(F) \
@@ -258,6 +276,7 @@ void HPSDCholesky( UpperOrLower uplo, AbstractDistMatrix<F>& APre )
 #define PROTO_BIGFLOAT PROTO_BASE(BigFloat)
 #define PROTO_COMPLEX_BIGFLOAT PROTO_BASE(Complex<BigFloat>)
 // #define PROTO_COMPLEX_HALF PROTO_BASE(Complex<cpu_half_type>)
+#endif // HYDROGEN_ENABLE_ALL_CHOLESKY
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE

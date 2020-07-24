@@ -17,7 +17,7 @@ set_full_path(THIS_DIR_SOURCES
 #  Trmm.cpp
 #  Trr2k.cpp
   Trrk.cpp
-#  Trsm.cpp
+  Trsm.cpp
 #  Trstrm.cpp
 #  Trtrmm.cpp
 #  TwoSidedTrmm.cpp
