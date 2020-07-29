@@ -34,7 +34,7 @@ void Trsm(
     Matrix<F, Device::GPU>& B,
     bool const)
 {
-    auto SyncManager = MakeMultiSync(
+    auto multisync = MakeMultiSync(
         SyncInfoFromMatrix(B), SyncInfoFromMatrix(A));
 
     gpu_blas::Trsm(
@@ -44,7 +44,7 @@ void Trsm(
         A.Height(), A.Width(),
         alpha, A.LockedBuffer(), A.LDim(),
         B.Buffer(), B.LDim(),
-        SyncManager);
+        multisync);
 }
 #endif // HYDROGEN_HAVE_GPU
 

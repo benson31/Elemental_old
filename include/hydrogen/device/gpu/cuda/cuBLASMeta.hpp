@@ -93,6 +93,12 @@ struct IsSupportedType_Base<cuComplex, op> : std::true_type {};
 template <BLAS_Op op>
 struct IsSupportedType_Base<cuDoubleComplex, op> : std::true_type {};
 
+// I could clean this up if the need arises. "Real herk" is "syrk".
+template <>
+struct IsSupportedType_Base<float, BLAS_Op::HERK> : std::false_type {};
+template <>
+struct IsSupportedType_Base<double, BLAS_Op::HERK> : std::false_type {};
+
 // No need to further test CUDA because this file isn't included if
 // either we don't have GPUs at all or we don't have CUDA support.
 #ifdef HYDROGEN_GPU_USE_FP16

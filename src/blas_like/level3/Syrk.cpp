@@ -55,12 +55,30 @@ void SyrkImpl_(
 
 template <typename T, typename=EnableWhen<IsComputeType<T,Device::GPU>>>
 void SyrkImpl_(
-    UpperOrLower uplo, Orientation orientation,
+    UpperOrLower uplo_in, Orientation orientation,
     T alpha, Matrix<T, Device::GPU> const& A,
     T beta, Matrix<T, Device::GPU>& C,
     bool conjugate)
 {
-    RuntimeError("Function not yet implemented for GPU.");
+    auto multisync = MakeMultiSync(
+        SyncInfoFromMatrix(C), SyncInfoFromMatrix(A));
+    Int const k = (orientation == NORMAL ? A.Width() : A.Height());
+    FillMode const uplo = UpperOrLowerToFillMode(uplo_in);
+    TransposeMode const trans = OrientationToTransposeMode(orientation);
+    if (conjugate)
+    {
+        gpu_blas::Herk(uplo, trans, C.Height(), k,
+                       RealPart(alpha), A.LockedBuffer(), A.LDim(),
+                       RealPart(beta),  C.Buffer(),       C.LDim(),
+                       multisync);
+    }
+    else
+    {
+        gpu_blas::Syrk(uplo, trans, C.Height(), k,
+                       alpha, A.LockedBuffer(), A.LDim(),
+                       beta,  C.Buffer(),       C.LDim(),
+                       multisync);
+    }
 }
 
 template <typename T,
@@ -97,8 +115,6 @@ void Syrk(
             LogicError("Nonconformal Syrk");
     }
 #endif // not defined EL_RELEASE
-    auto multisync = MakeMultiSync(SyncInfoFromMatrix(C),
-                                   SyncInfoFromMatrix(A));
     SyrkImpl_(uplo, orientation, alpha, A, beta, C, conjugate);
 }
 

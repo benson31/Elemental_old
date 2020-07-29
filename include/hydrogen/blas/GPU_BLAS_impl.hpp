@@ -276,6 +276,7 @@ void GemvImpl(
         reinterpret_cast<NTP>(y), ToSizeT(incy));
 }
 
+
 template <typename T, typename SizeT,
           typename=EnableWhen<IsSupportedType<T, BLAS_Op::HERK>>>
 void HerkImpl(
