@@ -236,6 +236,22 @@ using RealType = typename RealTypeT<T>::type;
                 &alpha, A, lda, &beta, C, ldc));        \
     }
 
+#define ADD_TRSM_IMPL(ScalarType, TypeChar)     \
+    void Trsm(                                  \
+        cublasHandle_t handle,                                \
+        cublasSideMode_t side, cublasFillMode_t uplo,         \
+        cublasOperation_t trans, cublasDiagType_t diag,       \
+        int m, int n,                                         \
+        ScalarType const& alpha,                              \
+        ScalarType const* A, int lda,                         \
+        ScalarType* B, int ldb)                               \
+    {                                                         \
+        H_CHECK_CUBLAS(                                       \
+            cublas ## TypeChar ## trsm(                       \
+                handle, side, uplo, trans, diag,              \
+                m, n, &alpha, A, lda, B, ldb));               \
+    }
+
 #define ADD_GEMM_IMPL(ScalarType, TypeChar)             \
     void Gemm(                                          \
         cublasHandle_t handle,                          \
@@ -363,6 +379,11 @@ ADD_SYRK_IMPL(float, S)
 ADD_SYRK_IMPL(double, D)
 ADD_SYRK_IMPL(cuComplex, C)
 ADD_SYRK_IMPL(cuDoubleComplex, Z)
+
+ADD_TRSM_IMPL(float, S)
+ADD_TRSM_IMPL(double, D)
+ADD_TRSM_IMPL(cuComplex, C)
+ADD_TRSM_IMPL(cuDoubleComplex, Z)
 
 ADD_GEMM_IMPL(__half, H)
 ADD_GEMM_IMPL(float, S)

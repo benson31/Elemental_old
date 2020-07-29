@@ -25,6 +25,7 @@ enum class BLAS_Op
     NRM2,
     SCAL,
     SYRK,
+    TRSM,
     /** @brief Axpy for 2D data with leading dimension */
     AXPY2D,
     /** @brief Copy for 2D data with leading dimension */
@@ -113,6 +114,12 @@ enum class SideMode
 {
     LEFT,
     RIGHT,
+};
+
+enum class DiagType
+{
+    UNIT,
+    NON_UNIT,
 };
 
 /** @brief Describes where pointers point. */

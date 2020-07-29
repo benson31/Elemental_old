@@ -402,19 +402,20 @@ enum TrsmAlgorithm {
 using namespace TrsmAlgorithmNS;
 
 template<typename F>
-void Trsm
-( LeftOrRight side, UpperOrLower uplo,
-  Orientation orientation, UnitOrNonUnit diag,
-  F alpha, const Matrix<F>& A, Matrix<F>& B,
-  bool checkIfSingular=false );
+void Trsm(
+    LeftOrRight side, UpperOrLower uplo,
+    Orientation orientation, UnitOrNonUnit diag,
+    F alpha, AbstractMatrix<F> const& A, AbstractMatrix<F>& B,
+    bool checkIfSingular=false);
 template<typename F>
-void Trsm
-( LeftOrRight side, UpperOrLower uplo,
-  Orientation orientation, UnitOrNonUnit diag,
-  F alpha,
-  const AbstractDistMatrix<F>& A,
-        AbstractDistMatrix<F>& B,
-  bool checkIfSingular=false, TrsmAlgorithm alg=TRSM_DEFAULT );
+void Trsm(
+    LeftOrRight side, UpperOrLower uplo,
+    Orientation orientation, UnitOrNonUnit diag,
+    F alpha,
+    AbstractDistMatrix<F> const& A,
+    AbstractDistMatrix<F>& B,
+    bool checkIfSingular=false,
+    TrsmAlgorithm alg=TRSM_DEFAULT);
 
 template<typename F>
 void LocalTrsm

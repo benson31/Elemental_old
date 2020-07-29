@@ -32,9 +32,19 @@ void Trsm(
     F alpha,
     Matrix<F, Device::GPU> const& A,
     Matrix<F, Device::GPU>& B,
-    bool checkIfSingular)
+    bool const)
 {
-    RuntimeError("GPU impl not done yet.");
+    auto SyncManager = MakeMultiSync(
+        SyncInfoFromMatrix(B), SyncInfoFromMatrix(A));
+
+    gpu_blas::Trsm(
+        LeftOrRightToSideMode(side), UpperOrLowerToFillMode(uplo),
+        OrientationToTransposeMode(orientation),
+        UnitOrNonUnitToDiagType(diag),
+        A.Height(), A.Width(),
+        alpha, A.LockedBuffer(), A.LDim(),
+        B.Buffer(), B.LDim(),
+        SyncManager);
 }
 #endif // HYDROGEN_HAVE_GPU
 
@@ -49,35 +59,21 @@ void Trsm(
     Matrix<F>& B,
     bool checkIfSingular)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( A.Height() != A.Width() )
-          LogicError("Triangular matrix must be square");
-      if( side == LEFT )
-      {
-          if( A.Height() != B.Height() )
-              LogicError("Nonconformal Trsm");
-      }
-      else
-      {
-          if( A.Height() != B.Width() )
-              LogicError("Nonconformal Trsm");
-      }
-    )
-    const char sideChar = LeftOrRightToChar( side );
-    const char uploChar = UpperOrLowerToChar( uplo );
-    const char transChar = OrientationToChar( orientation );
-    const char diagChar = UnitOrNonUnitToChar( diag );
-    if( checkIfSingular && diag != UNIT )
+    if (checkIfSingular && diag != UNIT)
     {
         const Int n = A.Height();
-        for( Int j=0; j<n; ++j )
-            if( A.Get(j,j) == F(0) )
+        for (Int j=0; j<n; ++j)
+            if (A.Get(j,j) == F(0))
                 throw SingularMatrixException();
     }
-    blas::Trsm
-    ( sideChar, uploChar, transChar, diagChar, B.Height(), B.Width(),
-      alpha, A.LockedBuffer(), A.LDim(), B.Buffer(), B.LDim() );
+    const char sideChar = LeftOrRightToChar(side);
+    const char uploChar = UpperOrLowerToChar(uplo);
+    const char transChar = OrientationToChar(orientation);
+    const char diagChar = UnitOrNonUnitToChar(diag);
+    blas::Trsm(
+        sideChar, uploChar, transChar, diagChar,
+        B.Height(), B.Width(),
+        alpha, A.LockedBuffer(), A.LDim(), B.Buffer(), B.LDim());
 }
 
 template <typename F>
@@ -91,6 +87,22 @@ void Trsm(
     AbstractMatrix<F>& B,
     bool checkIfSingular)
 {
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if (A.Height() != A.Width())
+        LogicError("Triangular matrix must be square");
+    if (side == LEFT)
+    {
+        if (A.Height() != B.Height())
+            LogicError("Nonconformal Trsm");
+    }
+    else
+    {
+        if (A.Height() != B.Width())
+            LogicError("Nonconformal Trsm");
+    }
+#endif // EL_RELEASE
+
     switch (A.GetDevice())
     {
     case Device::CPU:
@@ -453,8 +465,8 @@ void LocalTrsm
     Orientation orientation, \
     UnitOrNonUnit diag, \
     F alpha, \
-    const Matrix<F>& A, \
-          Matrix<F>& B, \
+    AbstractMatrix<F> const& A, \
+    AbstractMatrix<F>& B,       \
     bool checkIfSingular ); \
   template void Trsm \
   ( LeftOrRight side, \

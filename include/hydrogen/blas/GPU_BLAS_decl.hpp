@@ -437,6 +437,19 @@ void Syrk(
     T* C, SizeT ldc,
     SyncInfo<Device::GPU> const& syncinfo);
 
+/** @brief Triangular matrix solve.
+ *  @todo Finish documentation.
+ */
+template <typename T, typename SizeT>
+void Trsm(
+    SideMode side, FillMode uplo,
+    TransposeMode trans, DiagType diag,
+    SizeT m, SizeT n,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T* B, SizeT ldb,
+    SyncInfo<Device::GPU> const& syncinfo);
+
 /** @brief Matrix-matrix product in GPU memory.
  *
  *  Perform a scaled matrix-matrix product:

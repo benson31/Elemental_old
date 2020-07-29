@@ -122,6 +122,16 @@ ADD_GEMV_DECL(cuDoubleComplex);
         ScalarType const& beta,                         \
         ScalarType* C, int ldc)
 
+#define ADD_TRSM_DECL(ScalarType)                             \
+    void Trsm(                                                \
+        cublasHandle_t handle,                                \
+        cublasSideMode_t side, cublasFillMode_t uplo,         \
+        cublasOperation_t trans, cublasDiagType_t diag,       \
+        int m, int n,                                         \
+        ScalarType const& alpha,                              \
+        ScalarType const* A, int lda,                         \
+        ScalarType* B, int ldb)
+
 #define ADD_GEMM_DECL(ScalarType)               \
     void Gemm(                                  \
         cublasHandle_t handle,                  \
@@ -157,6 +167,11 @@ ADD_SYRK_DECL(float);
 ADD_SYRK_DECL(double);
 ADD_SYRK_DECL(cuComplex);
 ADD_SYRK_DECL(cuDoubleComplex);
+
+ADD_TRSM_DECL(float);
+ADD_TRSM_DECL(double);
+ADD_TRSM_DECL(cuComplex);
+ADD_TRSM_DECL(cuDoubleComplex);
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ADD_GEMM_DECL(__half);

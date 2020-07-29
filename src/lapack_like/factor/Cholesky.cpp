@@ -23,129 +23,147 @@ namespace El {
 
 // TODO: Pivoted Reverse Cholesky?
 
-template<typename F>
-void Cholesky( UpperOrLower uplo, Matrix<F>& A )
+template <typename F, Device D>
+void Cholesky(UpperOrLower uplo, Matrix<F,D>& A)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( A.Height() != A.Width() )
-          LogicError("A must be square");
-    )
-    if( uplo == LOWER )
-        cholesky::LowerVariant3Blocked( A );
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if (A.Height() != A.Width())
+        LogicError("A must be square");
+#endif // EL_RELEASE
+    if (uplo == LOWER)
+        cholesky::LowerVariant3Blocked(A);
     else
-        cholesky::UpperVariant3Blocked( A );
+        cholesky::UpperVariant3Blocked(A);
+}
+
+template <typename F>
+void Cholesky(UpperOrLower uplo, AbstractMatrix<F>& A)
+{
+    switch (A.GetDevice())
+    {
+    case Device::CPU:
+        Cholesky(uplo, static_cast<Matrix<F,Device::CPU>&>(A));
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        Cholesky(uplo, static_cast<Matrix<F,Device::GPU>&>(A));
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        RuntimeError("Bad device.");
+    }
 }
 
 #ifdef HYDROGEN_ENABLE_PIVOTED_CHOLESKY
-template<typename F>
-void Cholesky( UpperOrLower uplo, Matrix<F>& A, Permutation& p )
+template <typename F>
+void Cholesky(UpperOrLower uplo, Matrix<F>& A, Permutation& p)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     EL_DEBUG_ONLY(
-      if( A.Height() != A.Width() )
+      if (A.Height() != A.Width())
           LogicError("A must be square");
-    )
-    if( uplo == LOWER )
-        cholesky::PivotedLowerVariant3Blocked( A, p );
+   )
+    if (uplo == LOWER)
+        cholesky::PivotedLowerVariant3Blocked(A, p);
     else
-        cholesky::PivotedUpperVariant3Blocked( A, p );
+        cholesky::PivotedUpperVariant3Blocked(A, p);
 }
 #endif // HYDROGEN_ENABLE_PIVOTED_CHOLESKY
 
 #ifdef HYDROGEN_ENABLE_REVERSE_CHOLESKY
-template<typename F>
-void ReverseCholesky( UpperOrLower uplo, Matrix<F>& A )
+template <typename F>
+void ReverseCholesky(UpperOrLower uplo, Matrix<F>& A)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( A.Height() != A.Width() )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+      if (A.Height() != A.Width())
           LogicError("A must be square");
-    )
-    if( uplo == LOWER )
-        cholesky::ReverseLowerVariant3Blocked( A );
+#endif // EL_RELEASE
+    if (uplo == LOWER)
+        cholesky::ReverseLowerVariant3Blocked(A);
     else
-        cholesky::ReverseUpperVariant3Blocked( A );
+        cholesky::ReverseUpperVariant3Blocked(A);
 }
 #endif // HYDROGEN_ENABLE_REVERSE_CHOLESKY
 
 namespace cholesky {
 
-template<typename F,typename=EnableIf<IsBlasScalar<F>>>
-void ScaLAPACKHelper( UpperOrLower uplo, AbstractDistMatrix<F>& A )
+template <typename F,typename=EnableIf<IsBlasScalar<F>>>
+void ScaLAPACKHelper(UpperOrLower uplo, AbstractDistMatrix<F>& A)
 {
     AssertScaLAPACKSupport();
 #ifdef EL_HAVE_SCALAPACK
     // TODO: Add support for optionally timing the proxy redistribution
-    DistMatrixReadWriteProxy<F,F,MC,MR,BLOCK> ABlockProx( A );
+    DistMatrixReadWriteProxy<F,F,MC,MR,BLOCK> ABlockProx(A);
     auto& ABlock = ABlockProx.Get();
 
     const Int n = ABlock.Height();
-    const char uploChar = UpperOrLowerToChar( uplo );
+    const char uploChar = UpperOrLowerToChar(uplo);
 
-    auto descA = FillDesc( ABlock );
-    scalapack::Cholesky( uploChar, n, ABlock.Buffer(), descA.data() );
+    auto descA = FillDesc(ABlock);
+    scalapack::Cholesky(uploChar, n, ABlock.Buffer(), descA.data());
 #endif
 }
 
-template<typename F,typename=DisableIf<IsBlasScalar<F>>,typename=void>
-void ScaLAPACKHelper( UpperOrLower uplo, AbstractDistMatrix<F>& A )
+template <typename F,typename=DisableIf<IsBlasScalar<F>>,typename=void>
+void ScaLAPACKHelper(UpperOrLower uplo, AbstractDistMatrix<F>& A)
 {
     RuntimeError("There is no ScaLAPACK support for this datatype");
 }
 
 } // anonymous namespace
 
-template<typename F>
-void Cholesky( UpperOrLower uplo, AbstractDistMatrix<F>& A, bool scalapack )
+template <typename F>
+void Cholesky(UpperOrLower uplo, AbstractDistMatrix<F>& A, bool scalapack)
 {
-    EL_DEBUG_CSE
-    if( scalapack )
+    EL_DEBUG_CSE;
+    if (scalapack)
     {
-        cholesky::ScaLAPACKHelper( uplo, A );
+        cholesky::ScaLAPACKHelper(uplo, A);
     }
     else
     {
-        if( uplo == LOWER )
-            cholesky::LowerVariant3Blocked( A );
+        if (uplo == LOWER)
+            cholesky::LowerVariant3Blocked(A);
         else
-            cholesky::UpperVariant3Blocked( A );
+            cholesky::UpperVariant3Blocked(A);
     }
 }
 
 #ifdef HYDROGEN_ENABLE_PIVOTED_CHOLESKY
-template<typename F>
+template <typename F>
 void Cholesky
-( UpperOrLower uplo, AbstractDistMatrix<F>& A, DistPermutation& p )
+(UpperOrLower uplo, AbstractDistMatrix<F>& A, DistPermutation& p)
 {
-    EL_DEBUG_CSE
-    if( uplo == LOWER )
-        cholesky::PivotedLowerVariant3Blocked( A, p );
+    EL_DEBUG_CSE;
+    if (uplo == LOWER)
+        cholesky::PivotedLowerVariant3Blocked(A, p);
     else
-        cholesky::PivotedUpperVariant3Blocked( A, p );
+        cholesky::PivotedUpperVariant3Blocked(A, p);
 }
 #endif // HYDROGEN_ENABLE_PIVOTED_CHOLESKY
 
-template<typename F>
+template <typename F>
 void Cholesky
-( UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A )
-{ Cholesky( uplo, A.Matrix() ); }
+(UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A)
+{ Cholesky(uplo, A.Matrix()); }
 
 #ifdef HYDROGEN_ENABLE_REVERSE_CHOLESKY
-template<typename F>
-void ReverseCholesky( UpperOrLower uplo, AbstractDistMatrix<F>& A )
+template <typename F>
+void ReverseCholesky(UpperOrLower uplo, AbstractDistMatrix<F>& A)
 {
-    EL_DEBUG_CSE
-    if( uplo == LOWER )
-        cholesky::ReverseLowerVariant3Blocked( A );
+    EL_DEBUG_CSE;
+    if (uplo == LOWER)
+        cholesky::ReverseLowerVariant3Blocked(A);
     else
-        cholesky::ReverseUpperVariant3Blocked( A );
+        cholesky::ReverseUpperVariant3Blocked(A);
 }
 
-template<typename F>
+template <typename F>
 void ReverseCholesky
-( UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A )
-{ ReverseCholesky( uplo, A.Matrix() ); }
+(UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A)
+{ ReverseCholesky(uplo, A.Matrix()); }
 #endif // HYDROGEN_ENABLE_REVERSE_CHOLESKY
 
 #ifdef HYDROGEN_ENABLE_CHOLESKY_MOD
@@ -153,119 +171,119 @@ void ReverseCholesky
 //         L' L'^H := L L^H + alpha V V^H
 // or
 //         U'^H U' := U^H U + alpha V V^H
-template<typename F>
-void CholeskyMod( UpperOrLower uplo, Matrix<F>& T, Base<F> alpha, Matrix<F>& V )
+template <typename F>
+void CholeskyMod(UpperOrLower uplo, Matrix<F>& T, Base<F> alpha, Matrix<F>& V)
 {
-    EL_DEBUG_CSE
-    if( alpha == Base<F>(0) )
+    EL_DEBUG_CSE;
+    if (alpha == Base<F>(0))
         return;
-    if( uplo == LOWER )
-        cholesky::LowerMod( T, alpha, V );
+    if (uplo == LOWER)
+        cholesky::LowerMod(T, alpha, V);
     else
-        cholesky::UpperMod( T, alpha, V );
+        cholesky::UpperMod(T, alpha, V);
 }
 
-template<typename F>
+template <typename F>
 void CholeskyMod
-( UpperOrLower uplo,
+(UpperOrLower uplo,
   AbstractDistMatrix<F>& T,
   Base<F> alpha,
-  AbstractDistMatrix<F>& V )
+  AbstractDistMatrix<F>& V)
 {
-    EL_DEBUG_CSE
-    if( alpha == Base<F>(0) )
+    EL_DEBUG_CSE;
+    if (alpha == Base<F>(0))
         return;
-    if( uplo == LOWER )
-        cholesky::LowerMod( T, alpha, V );
+    if (uplo == LOWER)
+        cholesky::LowerMod(T, alpha, V);
     else
-        cholesky::UpperMod( T, alpha, V );
+        cholesky::UpperMod(T, alpha, V);
 }
 
-template<typename F>
-void HPSDCholesky( UpperOrLower uplo, Matrix<F>& A )
+template <typename F>
+void HPSDCholesky(UpperOrLower uplo, Matrix<F>& A)
 {
-    EL_DEBUG_CSE
-    HPSDSquareRoot( uplo, A );
-    MakeHermitian( uplo, A );
+    EL_DEBUG_CSE;
+    HPSDSquareRoot(uplo, A);
+    MakeHermitian(uplo, A);
 
-    if( uplo == LOWER )
-        lq::ExplicitTriang( A );
+    if (uplo == LOWER)
+        lq::ExplicitTriang(A);
     else
-        qr::ExplicitTriang( A );
+        qr::ExplicitTriang(A);
 }
 
-template<typename F>
-void HPSDCholesky( UpperOrLower uplo, AbstractDistMatrix<F>& APre )
+template <typename F>
+void HPSDCholesky(UpperOrLower uplo, AbstractDistMatrix<F>& APre)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
 
     // NOTE: This should be removed once HPSD, LQ, and QR have been generalized
-    DistMatrixReadWriteProxy<F,F,MC,MR> AProx( APre );
+    DistMatrixReadWriteProxy<F,F,MC,MR> AProx(APre);
     auto& A = AProx.Get();
 
-    HPSDSquareRoot( uplo, A );
-    MakeHermitian( uplo, A );
+    HPSDSquareRoot(uplo, A);
+    MakeHermitian(uplo, A);
 
-    if( uplo == LOWER )
-        lq::ExplicitTriang( A );
+    if (uplo == LOWER)
+        lq::ExplicitTriang(A);
     else
-        qr::ExplicitTriang( A );
+        qr::ExplicitTriang(A);
 }
 #endif // HYDROGEN_ENABLE_CHOLESKY_MOD
 
 #define PROTO(F)                                                        \
-    template void Cholesky( UpperOrLower uplo, Matrix<F>& A );          \
+    template void Cholesky(UpperOrLower uplo, AbstractMatrix<F>& A);    \
     template void Cholesky(                                             \
-        UpperOrLower uplo, AbstractDistMatrix<F>& A, bool scalapack );  \
+        UpperOrLower uplo, AbstractDistMatrix<F>& A, bool scalapack);   \
     template void Cholesky(                                             \
-        UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A );
+        UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A);
 
 #ifdef HYDROGEN_ENABLE_ALL_CHOLESKY
 #define PROTO_BASE(F) \
-  template void Cholesky( UpperOrLower uplo, Matrix<F>& A ); \
-  template void Cholesky \
-  ( UpperOrLower uplo, AbstractDistMatrix<F>& A, bool scalapack ); \
-  template void Cholesky( UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A ); \
-  template void ReverseCholesky( UpperOrLower uplo, Matrix<F>& A ); \
+  template void Cholesky(UpperOrLower uplo, Matrix<F>& A); \
+  template void Cholesky(                                        \
+      UpperOrLower uplo, AbstractDistMatrix<F>& A, bool scalapack);     \
+  template void Cholesky(UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A); \
+  template void ReverseCholesky(UpperOrLower uplo, Matrix<F>& A); \
   template void ReverseCholesky \
-  ( UpperOrLower uplo, AbstractDistMatrix<F>& A ); \
+  (UpperOrLower uplo, AbstractDistMatrix<F>& A); \
   template void ReverseCholesky \
-  ( UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A ); \
-  template void Cholesky( UpperOrLower uplo, Matrix<F>& A, Permutation& p ); \
+  (UpperOrLower uplo, DistMatrix<F,STAR,STAR>& A); \
+  template void Cholesky(UpperOrLower uplo, Matrix<F>& A, Permutation& p); \
   template void Cholesky \
-  ( UpperOrLower uplo, \
+  (UpperOrLower uplo, \
     AbstractDistMatrix<F>& A, \
-    DistPermutation& p ); \
+    DistPermutation& p); \
   template void CholeskyMod \
-  ( UpperOrLower uplo, Matrix<F>& T, Base<F> alpha, Matrix<F>& V ); \
+  (UpperOrLower uplo, Matrix<F>& T, Base<F> alpha, Matrix<F>& V); \
   template void CholeskyMod \
-  ( UpperOrLower uplo, \
+  (UpperOrLower uplo, \
     AbstractDistMatrix<F>& T, \
     Base<F> alpha, \
-    AbstractDistMatrix<F>& V ); \
+    AbstractDistMatrix<F>& V); \
   template void cholesky::SolveAfter \
-  ( UpperOrLower uplo, Orientation orientation, \
+  (UpperOrLower uplo, Orientation orientation, \
     const Matrix<F>& A, \
-          Matrix<F>& B ); \
+          Matrix<F>& B); \
   template void cholesky::SolveAfter \
-  ( UpperOrLower uplo, Orientation orientation, \
+  (UpperOrLower uplo, Orientation orientation, \
     const AbstractDistMatrix<F>& A, \
-          AbstractDistMatrix<F>& B ); \
+          AbstractDistMatrix<F>& B); \
   template void cholesky::SolveAfter \
-  ( UpperOrLower uplo, Orientation orientation, \
+  (UpperOrLower uplo, Orientation orientation, \
     const Matrix<F>& A, \
     const Permutation& p, \
-          Matrix<F>& B ); \
+          Matrix<F>& B); \
   template void cholesky::SolveAfter \
-  ( UpperOrLower uplo, Orientation orientation, \
+  (UpperOrLower uplo, Orientation orientation, \
     const AbstractDistMatrix<F>& A, \
     const DistPermutation& p, \
-          AbstractDistMatrix<F>& B );
+          AbstractDistMatrix<F>& B);
 
 #define PROTO(F) \
   PROTO_BASE(F) \
-  template void HPSDCholesky( UpperOrLower uplo, Matrix<F>& A ); \
-  template void HPSDCholesky( UpperOrLower uplo, AbstractDistMatrix<F>& A );
+  template void HPSDCholesky(UpperOrLower uplo, Matrix<F>& A); \
+  template void HPSDCholesky(UpperOrLower uplo, AbstractDistMatrix<F>& A);
 
 #define PROTO_DOUBLEDOUBLE PROTO_BASE(DoubleDouble)
 #define PROTO_QUADDOUBLE PROTO_BASE(QuadDouble)

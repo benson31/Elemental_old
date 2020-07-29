@@ -60,6 +60,7 @@ using gpu_blas_impl::GetLibraryHandle;
 using gpu_blas_impl::IsSupportedType;
 using gpu_blas_impl::NativeType;
 using gpu_blas_impl::SyncManager;
+using gpu_blas_impl::ToNativeDiagType;
 using gpu_blas_impl::ToNativeFillMode;
 using gpu_blas_impl::ToNativeSideMode;
 using gpu_blas_impl::ToNativeTransposeMode;
@@ -323,6 +324,31 @@ void SyrkImpl(
         reinterpret_cast<CNTP>(A), ToSizeT(lda),
         beta,
         reinterpret_cast<NTP>(C), ToSizeT(ldc));
+}
+
+template <typename T, typename SizeT,
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::SYRK>>>
+void TrsmImpl(
+    SideMode side, FillMode uplo,
+    TransposeMode trans, DiagType diag,
+    SizeT n, SizeT m,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T* B, SizeT ldb,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    using NTP = MakePointer<NativeType<T>>;
+    using CNTP = MakePointerToConst<NativeType<T>>;
+
+    SyncManager mgr(GetLibraryHandle(), syncinfo);
+    gpu_blas_impl::Trsm(
+        GetLibraryHandle(),
+        ToNativeSideMode(side), ToNativeFillMode(uplo),
+        ToNativeTransposeMode(trans), ToNativeDiagType(diag),
+        ToSizeT(n), ToSizeT(m),
+        alpha,
+        reinterpret_cast<CNTP>(A), ToSizeT(lda),
+        reinterpret_cast<NTP>(B), ToSizeT(ldb));
 }
 
 template <typename T, typename SizeT,
@@ -624,6 +650,24 @@ void SyrkImpl(
 }
 
 template <typename T, typename SizeT,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::SYRK>>,
+          typename=void>
+void TrsmImpl(
+    SideMode const, FillMode const,
+    TransposeMode const, DiagType const,
+    SizeT const, SizeT const,
+    T const&,
+    T const* const, SizeT const,
+    T* const, SizeT const,
+    SyncInfo<Device::GPU> const&)
+{
+    std::ostringstream oss;
+    oss << "No valid implementation of TRSM for T="
+        << TypeTraits<T>::Name();
+    throw std::logic_error(oss.str());
+}
+
+template <typename T, typename SizeT,
           typename=EnableUnless<IsSupportedType<T,BLAS_Op::GEMM>>,
           typename=void>
 void GemmImpl(
@@ -813,6 +857,20 @@ void Syrk(
                       alpha, A, lda,
                       beta, C, ldc,
                       syncinfo);
+}
+
+template <typename T, typename SizeT>
+void Trsm(
+    SideMode side, FillMode uplo,
+    TransposeMode trans, DiagType diag,
+    SizeT m, SizeT n,
+    T const& alpha,
+    T const* A, SizeT lda,
+    T* B, SizeT ldb,
+    SyncInfo<Device::GPU> const& syncinfo)
+{
+    details::TrsmImpl(side, uplo, trans, diag, m, n,
+                      alpha, A, lda, B, ldb, syncinfo);
 }
 
 template <typename T, typename SizeT>
