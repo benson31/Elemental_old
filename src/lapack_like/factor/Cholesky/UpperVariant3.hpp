@@ -16,7 +16,7 @@ namespace cholesky {
 template <typename F>
 void UpperVariant3Unblocked(Matrix<F, Device::GPU>& A)
 {
-    RuntimeError("Function not yet implemented.");
+    LocalGPUCholesky(FillMode::UPPER_TRIANGLE, A);
 }
 #endif // HYDROGEN_HAVE_GPU
 

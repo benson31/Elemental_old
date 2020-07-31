@@ -373,7 +373,8 @@ if (Hydrogen_ENABLE_CUDA)
       add_library(cuda::toolkit INTERFACE IMPORTED)
 
       foreach (lib IN LISTS CUDA_CUBLAS_LIBRARIES CUDA_LIBRARIES
-          CUDA_CUDA_LIBRARY CUB_LIBRARIES NVML_LIBRARIES)
+          CUDA_CUDA_LIBRARY CUB_LIBRARIES NVML_LIBRARIES
+          CUDA_cusolver_LIBRARY)
 
         if (lib)
           list(APPEND _CUDA_TOOLKIT_LIBS ${lib})

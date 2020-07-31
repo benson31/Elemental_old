@@ -16,12 +16,12 @@ namespace cholesky {
 template <typename F>
 void LowerVariant3Unblocked(Matrix<F, Device::GPU>& A)
 {
-    RuntimeError("Function not yet implemented.");
+    LocalGPUCholesky(FillMode::LOWER_TRIANGLE, A);
 }
 #endif // HYDROGEN_HAVE_GPU
 
-template <typename F, Device D>
-void LowerVariant3Unblocked(Matrix<F,D>& A)
+template <typename F>
+void LowerVariant3Unblocked(Matrix<F,Device::CPU>& A)
 {
     EL_DEBUG_CSE;
 #ifndef EL_RELEASE

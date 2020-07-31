@@ -34,7 +34,12 @@ enum class BLAS_Op
     COPY2DSTRIDED,
     /** @brief In-place scale for 2D data with leading dimension */
     SCALE2D,
-};
+}; // enum class BLAS_Op
+
+enum class LAPACK_Op
+{
+    POTRF,
+}; // enum class LAPACK_Op
 
 /** @brief Describes the fill mode for BLAS. */
 enum class FillMode

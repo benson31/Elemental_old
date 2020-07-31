@@ -200,6 +200,25 @@ using RealType = typename RealTypeT<T>::type;
 //
 // BLAS 3
 //
+
+#define ADD_REAL_HERK_IMPL(ScalarType, TypeChar)        \
+    void Herk(                                          \
+        cublasHandle_t handle,                          \
+        cublasFillMode_t uplo, cublasOperation_t trans, \
+        int n, int k,                                   \
+        ScalarType const& alpha,                        \
+        ScalarType const* A, int lda,                   \
+        ScalarType const& beta,                         \
+        ScalarType * C, int ldc)                        \
+    {                                                   \
+        H_CHECK_CUBLAS(                                 \
+            cublas ## TypeChar ## syrk(                 \
+                handle,                                 \
+                uplo, trans,                            \
+                n, k,                                   \
+                &alpha, A, lda, &beta, C, ldc));        \
+    }
+
 #define ADD_HERK_IMPL(ScalarType, BaseScalarType, TypeChar)     \
     void Herk(                                                  \
         cublasHandle_t handle,                                  \
@@ -372,6 +391,8 @@ ADD_GEMV_IMPL(cuComplex, C)
 ADD_GEMV_IMPL(cuDoubleComplex, Z)
 
 // BLAS 3
+ADD_REAL_HERK_IMPL(float, S)
+ADD_REAL_HERK_IMPL(double, D)
 ADD_HERK_IMPL(cuComplex, float, C)
 ADD_HERK_IMPL(cuDoubleComplex, double, Z)
 

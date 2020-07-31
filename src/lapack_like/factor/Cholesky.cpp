@@ -8,6 +8,24 @@
 */
 #include <El.hpp>
 
+// HACK
+#ifdef HYDROGEN_HAVE_GPU
+namespace {
+template <typename T>
+void LocalGPUCholesky(hydrogen::FillMode uplo,
+                      El::Matrix<T, hydrogen::Device::GPU>& A)
+{
+#ifndef EL_RELEASE
+    if (A.Height() != A.Width())
+        El::LogicError("Can only compute Cholesky factor of square matrices");
+#endif // EL_RELEASE
+    hydrogen::gpu_lapack::CholeskyFactorize(
+        uplo, A.Height(), A.Buffer(), A.LDim(),
+        El::SyncInfoFromMatrix(A));
+}
+}// namespace
+#endif // HYDROGEN_HAVE_GPU
+
 #include "./Cholesky/LowerVariant3.hpp"
 #include "./Cholesky/UpperVariant3.hpp"
 #include "./Cholesky/ReverseLowerVariant3.hpp"
@@ -23,8 +41,16 @@ namespace El {
 
 // TODO: Pivoted Reverse Cholesky?
 
-template <typename F, Device D>
-void Cholesky(UpperOrLower uplo, Matrix<F,D>& A)
+#ifdef HYDROGEN_HAVE_GPU
+template <typename F>
+void Cholesky(UpperOrLower uplo, Matrix<F,Device::GPU>& A)
+{
+    LocalGPUCholesky(UpperOrLowerToFillMode(uplo), A);
+}
+#endif // HYDROGEN_HAVE_GPU
+
+template <typename F>
+void Cholesky(UpperOrLower uplo, Matrix<F,Device::CPU>& A)
 {
     EL_DEBUG_CSE;
 #ifndef EL_RELEASE

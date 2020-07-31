@@ -160,6 +160,8 @@ ADD_GEMV_DECL(cuDoubleComplex);
         long long int strideC,                          \
         int batchCount)
 
+ADD_HERK_DECL(float, float);
+ADD_HERK_DECL(double, double);
 ADD_HERK_DECL(cuComplex, float);
 ADD_HERK_DECL(cuDoubleComplex, double);
 

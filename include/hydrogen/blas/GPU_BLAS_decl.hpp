@@ -584,5 +584,53 @@ void Dgmm(SideMode side,
 ///@}
 
 }// namespace gpu_blas
+
+namespace gpu_lapack
+{
+
+/** @brief Compute the Cholesky factorization of A.
+ *
+ *  This routine will allocate the properly-sized workspace and info
+ *  parameter, using the caching allocators if available.
+ *
+ *  @note The `info` parameter to the underlying library will only be
+ *        checked in Debug builds.
+ */
+template <typename T, typename SizeT>
+void CholeskyFactorize(FillMode uplo,
+                       SizeT n,
+                       T* A, SizeT lda,
+                       SyncInfo<Device::GPU> const& si);
+
+/** @brief Compute the Cholesky factorization of A with a user-provided
+ *         workspace.
+ *
+ *  This routine will allocate the info argument.
+ *
+ *  @note The `info` parameter to the underlying library will only be
+ *        checked in Debug builds.
+ *  @todo Improve the error reporting.
+ */
+template <typename T, typename SizeT>
+void CholeskyFactorize(FillMode uplo,
+                       SizeT n,
+                       T* A, SizeT lda,
+                       T* workspace, SizeT workspace_size,
+                       SyncInfo<Device::GPU> const& si);
+
+/** @brief Compute the Cholesky factorization of A with a user-provided
+ *         workspace and info parameter.
+ *
+ *  @note The `info` parameter will not be checked by this routine.
+ */
+template <typename T, typename SizeT, typename InfoT>
+void CholeskyFactorize(FillMode uplo,
+                       SizeT n,
+                       T* A, SizeT lda,
+                       T* workspace, SizeT workspace_size,
+                       InfoT* info,
+                       SyncInfo<Device::GPU> const& si);
+
+}// namespace gpu_lapack
 }// namespace hydrogen
 #endif // HYDROGEN_GPU_BLAS_DECL_HPP_
