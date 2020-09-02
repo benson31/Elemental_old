@@ -43,8 +43,10 @@ namespace gpu_lapack_impl = hydrogen::cusolver;
 
 #define GPU_BLAS_USE_ROCBLAS
 #include <hydrogen/device/gpu/rocm/rocBLAS.hpp>
+#include <hydrogen/device/gpu/rocm/rocSOLVER.hpp>
 
 namespace gpu_blas_impl = hydrogen::rocblas;
+namespace gpu_lapack_impl = hydrogen::rocsolver;
 
 #else
 #pragma GCC error "LOGIC ERROR: No GPU programming model enabled."

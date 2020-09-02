@@ -28,7 +28,7 @@ using cusolver_int = int;
         cusolverDnHandle_t handle,                      \
         cublasFillMode_t uplo,                          \
         cusolver_int n,                                 \
-        DeviceArray<ScalarType> A, cusolver_int lda);  \
+        DeviceArray<ScalarType> A, cusolver_int lda);   \
     void Potrf(                                         \
         cusolverDnHandle_t handle,                      \
         cublasFillMode_t uplo,                          \

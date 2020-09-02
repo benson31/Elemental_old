@@ -90,13 +90,28 @@ template <BLAS_Op op>
 struct IsSupportedType_Base<double, op> : std::true_type {};
 
 template <>
-struct IsSupportedType_Base<rocblas_float_complex, BLAS_Op::Herk>
+struct IsSupportedType_Base<float, BLAS_Op::HERK>
+    : std::false_type {};
+template <>
+struct IsSupportedType_Base<double, BLAS_Op::HERK>
+    : std::false_type {};
+template <>
+struct IsSupportedType_Base<rocblas_float_complex, BLAS_Op::HERK>
     : std::true_type {};
-struct IsSupportedType_Base<rocblas_double_complex, BLAS_Op::Herk>
+template <>
+struct IsSupportedType_Base<rocblas_double_complex, BLAS_Op::HERK>
     : std::true_type {};
-struct IsSupportedType_Base<rocblas_float_complex, BLAS_Op::Syrk>
+template <>
+struct IsSupportedType_Base<rocblas_float_complex, BLAS_Op::SYRK>
     : std::true_type {};
-struct IsSupportedType_Base<rocblas_double_complex, BLAS_Op::Syrk>
+template <>
+struct IsSupportedType_Base<rocblas_double_complex, BLAS_Op::SYRK>
+    : std::true_type {};
+template <>
+struct IsSupportedType_Base<rocblas_float_complex, BLAS_Op::TRSM>
+    : std::true_type {};
+template <>
+struct IsSupportedType_Base<rocblas_double_complex, BLAS_Op::TRSM>
     : std::true_type {};
 
 #ifdef HYDROGEN_GPU_USE_FP16

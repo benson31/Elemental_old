@@ -14,6 +14,8 @@ if (HYDROGEN_HAVE_GPU)
       ROCm.cpp
       rocBLAS.cpp
       rocBLAS_API.cpp
+      rocSOLVER.cpp
+      rocSOLVER_API.cpp
       )
   endif ()
 

@@ -81,7 +81,7 @@ ADD_GEMV_DECL(double);
 #define ADD_HERK_DECL(ScalarType, BaseScalarType)               \
     void Herk(                                                  \
         rocblas_handle handle,                                  \
-        rocblas_fill_mode uplo, rocblas_operation trans,        \
+        rocblas_fill uplo, rocblas_operation trans,             \
         rocblas_int n, rocblas_int k,                           \
         BaseScalarType const& alpha,                            \
         ScalarType const* A, rocblas_int lda,                   \
@@ -91,12 +91,22 @@ ADD_GEMV_DECL(double);
 #define ADD_SYRK_DECL(ScalarType)                               \
     void Syrk(                                                  \
         rocblas_handle handle,                                  \
-        rocblas_fill_mode uplo, rocblas_operation trans,        \
+        rocblas_fill uplo, rocblas_operation trans,             \
         rocblas_int n, rocblas_int k,                           \
         ScalarType const& alpha,                                \
         ScalarType const* A, rocblas_int lda,                   \
         ScalarType const& beta,                                 \
         ScalarType* C, rocblas_int ldc)
+
+#define ADD_TRSM_DECL(ScalarType)                             \
+    void Trsm(                                                \
+        rocblas_handle handle,                                \
+        rocblas_side side, rocblas_fill uplo,                 \
+        rocblas_operation trans, rocblas_diagonal diag,       \
+        rocblas_int m, rocblas_int n,                         \
+        ScalarType const& alpha,                              \
+        ScalarType const* A, int lda,                         \
+        ScalarType* B, int ldb)
 
 #define ADD_GEMM_DECL(ScalarType)                       \
     void Gemm(                                          \
@@ -117,6 +127,11 @@ ADD_SYRK_DECL(float);
 ADD_SYRK_DECL(double);
 ADD_SYRK_DECL(rocblas_float_complex);
 ADD_SYRK_DECL(rocblas_double_complex);
+
+ADD_TRSM_DECL(float);
+ADD_TRSM_DECL(double);
+ADD_TRSM_DECL(rocblas_float_complex);
+ADD_TRSM_DECL(rocblas_double_complex);
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ADD_GEMM_DECL(rocblas_half);

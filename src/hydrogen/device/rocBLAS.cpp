@@ -1,4 +1,5 @@
 #include <hydrogen/device/gpu/rocm/rocBLAS.hpp>
+#include <hydrogen/device/gpu/rocm/rocSOLVER.hpp>
 
 // Helper macro for converting enums to strings.
 #define H_ADD_ROCBLAS_ENUM_TO_STRING_CASE(enum_value) \
@@ -65,6 +66,8 @@ void Initialize(rocblas_handle handle)
                 GetLibraryHandle(), rocblas_pointer_mode_host));
 
         rocblas_is_initialized_ = true;
+
+        rocsolver::InitializeDense();
     }
 }
 

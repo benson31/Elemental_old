@@ -43,8 +43,8 @@ void FinalizeDense();
 
 /** @brief Replace the default cuSolverDn library handle.
  *
- *  This will destroy the current default cuBLAS library handle and
- *  assume control of the input handle. The cuBLAS library must be
+ *  This will destroy the current default cuSOLVER library handle and
+ *  assume control of the input handle. The cuSOLVER library must be
  *  initialized in order to call this function.
  *
  *  \param[in] handle The new library handle. Hydrogen will take
