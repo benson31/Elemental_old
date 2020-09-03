@@ -332,7 +332,7 @@ void SyrkImpl(
 }
 
 template <typename T, typename SizeT,
-          typename=EnableWhen<IsSupportedType<T, BLAS_Op::SYRK>>>
+          typename=EnableWhen<IsSupportedType<T, BLAS_Op::TRSM>>>
 void TrsmImpl(
     SideMode side, FillMode uplo,
     TransposeMode trans, DiagType diag,
@@ -655,7 +655,7 @@ void SyrkImpl(
 }
 
 template <typename T, typename SizeT,
-          typename=EnableUnless<IsSupportedType<T, BLAS_Op::SYRK>>,
+          typename=EnableUnless<IsSupportedType<T, BLAS_Op::TRSM>>,
           typename=void>
 void TrsmImpl(
     SideMode const, FillMode const,
@@ -969,7 +969,7 @@ void CholeskyFactorizeImpl(FillMode uplo,
     Synchronize(si);
     if (host_info > gpu_blas_impl::InfoT(0))
         throw std::runtime_error("Cholesky: Matrix not HPD.");
-    else if (host_inf < gpu::blas_impl::InfoT(0))
+    else if (host_info < gpu::blas_impl::InfoT(0))
         throw std::runtime_error("Cholesky: A parameter is bad.");
 #endif // EL_RELEASE
 }

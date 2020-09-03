@@ -28,6 +28,7 @@ void InitializeDense(rocblas_handle handle)
 void FinalizeDense()
 {
     rocblas::Finalize();
+    rocsolver_is_initialized_ = false;
 }
 
 void ReplaceDenseLibraryHandle(rocblas_handle handle)
