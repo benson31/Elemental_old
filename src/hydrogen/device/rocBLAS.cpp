@@ -53,6 +53,8 @@ void Initialize(rocblas_handle handle)
 {
     if (!IsInitialized())
     {
+        rocblas_initialize();
+
         if (!handle)
             H_CHECK_ROCBLAS(rocblas_create_handle(&default_rocblas_handle_));
         else
