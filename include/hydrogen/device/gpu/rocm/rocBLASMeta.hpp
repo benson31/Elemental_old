@@ -119,6 +119,9 @@ template <>
 struct IsSupportedType_Base<rocblas_half, BLAS_Op::AXPY> : std::true_type {};
 template <>
 struct IsSupportedType_Base<rocblas_half, BLAS_Op::GEMM> : std::true_type {};
+template <>
+struct IsSupportedType_Base<rocblas_half, BLAS_Op::GEMMSTRIDEDBATCHED>
+    : std::true_type {};
 #endif // HYDROGEN_GPU_USE_FP16
 
 /** @class IsSupportedType

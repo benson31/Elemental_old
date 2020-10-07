@@ -24,15 +24,15 @@ namespace rocblas
               rocblas_int n, ScalarType const* X, rocblas_int incx,     \
               ScalarType* Y, rocblas_int incy)
 
-#define ADD_DOT_DECL(ScalarType)                        \
-    void Dot(rocblasHandle_t handle,                    \
-             rocblas_int n,                             \
-             ScalarType const* X, rocblas_int incx,     \
-             ScalarType const* Y, rocblas_int incy,     \
+#define ADD_DOT_DECL(ScalarType)                          \
+    void Dot(rocblas_handle handle,                       \
+             rocblas_int n,                               \
+             ScalarType const* X, rocblas_int incx,       \
+             ScalarType const* Y, rocblas_int incy,       \
              ScalarType* output)
 
 #define ADD_NRM2_DECL(ScalarType)                       \
-    void Nrm2(rocblasHandle_t handle,                   \
+    void Nrm2(rocblas_handle handle,                    \
               rocblas_int n,                            \
               ScalarType const* X, rocblas_int incx,    \
               ScalarType* output)
@@ -50,6 +50,12 @@ ADD_AXPY_DECL(double);
 
 ADD_COPY_DECL(float);
 ADD_COPY_DECL(double);
+
+ADD_DOT_DECL(float);
+ADD_DOT_DECL(double);
+
+ADD_NRM2_DECL(float);
+ADD_NRM2_DECL(double);
 
 #ifdef HYDROGEN_GPU_USE_FP16
 ADD_SCALE_DECL(rocblas_half);
@@ -120,6 +126,22 @@ ADD_GEMV_DECL(double);
         ScalarType const& beta,                         \
         ScalarType* C, rocblas_int ldc)
 
+#define ADD_GEMM_STRIDED_BATCHED_DECL(ScalarType)         \
+    void GemmStridedBatched(                              \
+        rocblas_handle handle,                            \
+        rocblas_operation transpA,                        \
+        rocblas_operation transpB,                        \
+        rocblas_int m, rocblas_int n, rocblas_int k,      \
+        ScalarType const* alpha,                          \
+        ScalarType const* A, rocblas_int lda,             \
+        rocblas_stride strideA,                           \
+        ScalarType const* B, rocblas_int ldb,             \
+        rocblas_stride strideB,                           \
+        ScalarType const* beta,                           \
+        ScalarType* C, rocblas_int ldc,                   \
+        rocblas_stride strideC,                           \
+        rocblas_int batchCount)
+
 ADD_HERK_DECL(rocblas_float_complex, float);
 ADD_HERK_DECL(rocblas_double_complex, double);
 
@@ -138,6 +160,12 @@ ADD_GEMM_DECL(rocblas_half);
 #endif // HYDROGEN_GPU_USE_FP16
 ADD_GEMM_DECL(float);
 ADD_GEMM_DECL(double);
+
+#ifdef HYDROGEN_GPU_USE_FP16
+ADD_GEMM_STRIDED_BATCHED_DECL(rocblas_half);
+#endif // HYDROGEN_GPU_USE_FP16
+ADD_GEMM_STRIDED_BATCHED_DECL(float);
+ADD_GEMM_STRIDED_BATCHED_DECL(double);
 
 ///@}
 /** @name BLAS-like Extension Routines */
