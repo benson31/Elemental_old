@@ -472,18 +472,25 @@ if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
 endif ()
 
 if (Hydrogen_ENABLE_ALUMINUM)
-  find_package(Aluminum 0.7.0 NO_MODULE
+  find_package(Aluminum 1.0.0 NO_MODULE QUIET
     HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
     $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
     PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
     NO_DEFAULT_PATH)
+  find_package(Aluminum 1.0.0 NO_MODULE QUIET)
   if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.7.0 NO_MODULE)
+    find_package(Aluminum 0.7.0 NO_MODULE QUIET
+      HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
+      $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
+      PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
+      NO_DEFAULT_PATH)
+    find_package(Aluminum 0.7.0 NO_MODULE QUIET)
   endif ()
 
   if (Aluminum_FOUND)
     set(HYDROGEN_HAVE_ALUMINUM TRUE)
-    message(STATUS "Found Aluminum: ${Aluminum_DIR}")
+    message(STATUS
+      "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
 
     if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
       set(HYDROGEN_HAVE_NCCL2 TRUE)
