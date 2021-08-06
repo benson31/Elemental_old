@@ -148,7 +148,7 @@ G* New( size_t size, unsigned int mode, SyncInfo<Device::GPU> const& syncInfo_ )
         cudaMemGetInfo(&freeMemory, &totalMemory);
         std::string error_string = cudaGetErrorString(status);
 #elif defined(HYDROGEN_HAVE_ROCM)
-        hipMemGetInfo(&freeMemory, &totalMemory);
+        static_cast<void>(hipMemGetInfo(&freeMemory, &totalMemory));
         std::string error_string = hipGetErrorString(status);
 #endif
         RuntimeError("Failed to allocate GPU memory with message: ",
