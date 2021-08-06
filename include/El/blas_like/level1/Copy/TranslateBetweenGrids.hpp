@@ -1194,14 +1194,9 @@ void TranslateBetweenGridsScatterCommParentSmall
         metaData[3] = 0;
     }
 
-
-
     const std::vector<Int> sendMetaData (metaData,metaData + 4 );
 
-
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
     Synchronize(syncGeneral);
-
 
     mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommA,syncGeneralMetaData);
     Synchronize(syncGeneralMetaData);
@@ -1860,14 +1855,8 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
 
         }
     }
-    const Int indexB = indexBVec[0];
 
     Matrix<T,D2> conversionMatrix(mLocA,nLocA), transposedMatrix(int((mLocA*nLocA)/splitDim),splitDim), tempMatrix((mLocA/splitDim) * nLocA, splitDim/numChildLayers);
-
-
-
-
-
 
     if(inAGrid)
     {
@@ -1876,9 +1865,6 @@ void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
         conversionMatrix.Resize(splitDim, int((mLocA*nLocA)/splitDim));
 
         Transpose(conversionMatrix,transposedMatrix);
-
-
-
     }
 
 
@@ -2009,12 +1995,6 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
     DistMatrix<T,STAR,VC,ELEMENT,D2>* B = dynamic_cast<DistMatrix<T,STAR,VC,ELEMENT,D2>*>( &(*B_Vector[indexB]));
     Matrix<T,D2>  transposedMatrix(int((mLocA*nLocA)/splitDim),splitDim), recvTransposedMatrix(nLocA, mLocA*gatherCommSize), sendTransposedMatrix(nLocA,mLocA);
 
-    SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
-
-
-
-
-
     Transpose(A.LockedMatrix(),sendTransposedMatrix);
 
     const Int sizeB = B->Grid().VCSize();
@@ -2064,8 +2044,9 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
         Matrix<T,D2>  tempMatrix( (mLocA)/numChildLayers, nLocA);
         Transpose(conversionMatrixVector[childLayerSubGrid], tempMatrix);
 
-        std::printf("Temp matrix Height %d width %d\n", tempMatrix.Height(), tempMatrix.Width());
-
+        std::cout << "Temp matrix Height " << tempMatrix.Height()
+                  << " width " << tempMatrix.Width()
+                  << std::endl;
 
         copy::util::InterleaveMatrix(
             // childLayerSplitHeight * nLocA, (mLocA/splitDim)*gatherCommSize,
@@ -2076,9 +2057,6 @@ void TranslateBetweenGridsSliceConcatAlongFirstDim
             syncGeneral);
 
         // Copy(tempMatrix,dynamic_cast<DistMatrix<T,STAR,VC,ELEMENT,D2>*>( &(*B_Vector[indexBVec[childLayerSubGrid]]))->Matrix());
-
-        std::printf("Here here\n");
-
 
     }
 
@@ -3152,7 +3130,7 @@ void TranslateBetweenGridsBroadcastOptComm
 
     Synchronize(syncGeneral);
 
-    if(sizeA != sizeB*B_Vector.size())
+    if(static_cast<size_t>(sizeA) != sizeB*B_Vector.size())
     {
         mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommA,syncGeneralMetaData);
         Synchronize(syncGeneralMetaData);
@@ -3168,29 +3146,19 @@ void TranslateBetweenGridsBroadcastOptComm
         B_Vector[i]->Resize(m,n);
     }
 
-
-
-
-
-
     // Parent Subgrid Size: 4 Child Subgrid Size: 3
     // Parent 0 1 2 3 0 1 2 3 0 1 2 3
     // Child  0 1 2 0 1 2 0 1 2 0 1 2
 
-
     std::vector<int> index_to_put(sizeA,-1);
-
 
     for(Int i = 0; i < int(rowLCM/sizeB); ++i)
     {
         index_to_put[i] = i;
     }
 
-
     SyncInfo<D1> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
     SyncInfo<D2> syncInfoB = SyncInfoFromMatrix(B->LockedMatrix());
-
-
 
     // const bool inAGrid = A.Participating();
     const bool inBGrid = indexB >=0 ? true:false;
@@ -3336,7 +3304,7 @@ void TranslateBetweenGridsBroadcastBasic
 
 
 
-    if(sizeA != sizeB*B_Vector.size())
+    if(static_cast<size_t>(sizeA) != sizeB*B_Vector.size())
     {
         mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommA,syncGeneralMetaData);
         Synchronize(syncGeneralMetaData);
@@ -3886,17 +3854,13 @@ void TranslateBetweenGrids
     // Compute the number of process rows and columns that each process
     // needs to send to.
 
-    const Int colRankA = A.ColRank();
-    const Int rowRankA = A.RowRank();
     Int colStrideA = A.ColStride();
     Int rowStrideA = A.RowStride();
     Int colAlignA = A.ColAlign();
     Int rowAlignA = A.RowAlign();
     SyncInfo<D1> syncGeneral = SyncInfo<D1>();
 
-
     const bool inAGrid = A.Participating();
-
 
     Int recvMetaData[6];
 
@@ -3943,12 +3907,8 @@ void TranslateBetweenGrids
     B.Resize(m, n);
     const Int colStrideB = B.ColStride();
     const Int rowStrideB = B.RowStride();
-    const Int colShiftB = B.ColShift();
-    const Int rowShiftB = B.RowShift();
     const Int colRankB = B.ColRank();
-    const Int rowRankB = B.RowRank();
     const Int colAlignB = B.ColAlign();
-    const Int rowAlignB = B.RowAlign();
     const bool inBGrid = B.Participating();
 
 
@@ -3962,28 +3922,16 @@ void TranslateBetweenGrids
 
     const Int rankBRecv = Mod(B.Grid().VCRank(), rowStrideA);
 
-
-
     //Setup for receiving data in B
     const Int sendColOffset = colAlignA;
     const Int recvColOffset =
       Mod(colAlignB,colStrideB);
-    const Int sendRowOffset = rowAlignA;
-    const Int recvRowOffset =
-      Mod(0*rowStrideA+rowAlignB,rowStrideB);
 
     const Int colShift = Mod(colRankB-recvColOffset, colStrideB);
-    const Int rowShift = Mod(rowRankB-recvRowOffset, rowStrideB);
-
 
     const Int numInB = B.Grid().Rank();
 
     const Int firstSendRow = Mod(colShift+sendColOffset,colStrideA);
-    const Int firstSendCol = Mod(rowShift+sendRowOffset,rowStrideA);
-
-    const Int numColRecvs = Length(colStrideA,colShift,colStrideB);
-    Int sendCol = firstSendCol;
-
 
     // Recv data
     // For now, simply receive sequentially. Until we switch to
@@ -4038,8 +3986,6 @@ void TranslateBetweenGrids
     T* sendBuf = send_buf.data();
     T* recvBuf = recv_buf.data();
 
-    Int recvRow = 0;
-
     //Ranks of processes to send data.
     //Key: Process rank
     //value: column offset
@@ -4080,11 +4026,6 @@ void TranslateBetweenGrids
                 sendRow = Mod(sendRow+rowStrideB,rowStrideA);
                 if(rankMap[sendVCRank]==myRankViewing) break;
             }
-
-
-
-            const Int recvWidth = ((rowRecv*rowStrideB + numInB)>= Mod(n,rowLCM)) ?
-                                        floor(n/rowLCM) : floor(n/rowLCM)+1;
 
             copy::util::InterleaveMatrix(
                 mLocA, sendWidth,
