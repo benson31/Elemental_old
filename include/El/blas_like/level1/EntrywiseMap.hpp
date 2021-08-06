@@ -15,6 +15,10 @@
 #include "hydrogen/blas/gpu/EntrywiseMapImpl.hpp"
 #endif // defined HYDROGEN_HAVE_GPU
 
+#if defined __clang__ && __clang__
+#pragma clang diagnostic ignored "-Wpass-failed"
+#endif // defined __clang__ && __clang__
+
 namespace El {
 
 template<typename T>
