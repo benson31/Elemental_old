@@ -331,79 +331,66 @@ if (Hydrogen_ENABLE_HALF)
 endif ()
 
 if (Hydrogen_ENABLE_CUDA)
+  enable_language(CUDA)
 
-  include(CheckLanguage)
-  check_language(CUDA)
-
-  if (CMAKE_CUDA_COMPILER)
-    enable_language(CUDA)
-
-    if (NOT CMAKE_CUDA_STANDARD
-        OR CMAKE_CUDA_STANDARD EQUAL 98
-        OR CMAKE_CUDA_STANDARD LESS 14)
-      set(CMAKE_CUDA_STANDARD 14)
-      set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
-    endif ()
-
-    find_package(CUDA REQUIRED) # Enable all the macros
-    find_package(NVML REQUIRED)
-
-    if (Hydrogen_ENABLE_GPU_TENSOR_MATH)
-      set(HYDROGEN_GPU_USE_TENSOR_OP_MATH TRUE)
-    endif ()
-
-    if (Hydrogen_ENABLE_GPU_FP16)
-      set(HYDROGEN_GPU_USE_FP16 TRUE)
-    endif ()
-
-    if (Hydrogen_ENABLE_CUB)
-      find_package(CUB REQUIRED)
-      set(HYDROGEN_HAVE_CUB TRUE)
-    else ()
-      set(HYDROGEN_HAVE_CUB FALSE)
-    endif ()
-
-    if (Hydrogen_ENABLE_NVPROF)
-      find_package(NVTX REQUIRED)
-      set(HYDROGEN_HAVE_NVPROF TRUE)
-    else ()
-      set(HYDROGEN_HAVE_NVPROF FALSE)
-    endif ()
-
-    if (NOT TARGET cuda::toolkit)
-
-      add_library(cuda::toolkit INTERFACE IMPORTED)
-
-      foreach (lib IN LISTS CUDA_CUBLAS_LIBRARIES CUDA_LIBRARIES
-          CUDA_CUDA_LIBRARY CUB_LIBRARIES NVML_LIBRARIES
-          CUDA_cusolver_LIBRARY)
-
-        if (lib)
-          list(APPEND _CUDA_TOOLKIT_LIBS ${lib})
-        endif ()
-
-      endforeach ()
-
-      set_property(TARGET cuda::toolkit PROPERTY
-        INTERFACE_LINK_LIBRARIES "${_CUDA_TOOLKIT_LIBS}")
-
-      set_property(TARGET cuda::toolkit PROPERTY
-        INTERFACE_COMPILE_OPTIONS
-        $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_60>
-        $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
-
-      set_property(TARGET cuda::toolkit PROPERTY
-        INTERFACE_INCLUDE_DIRECTORIES "${CUDA_INCLUDE_DIRS}")
-    endif ()
-    set(HYDROGEN_HAVE_CUDA TRUE)
-  else ()
-
-    message(FATAL_ERROR
-      "CUDA support not found. Disabling CUDA the features.")
-    set(Hydrogen_ENABLE_CUDA FALSE)
-    set(HYDROGEN_HAVE_CUDA FALSE)
-
+  if (NOT CMAKE_CUDA_STANDARD
+      OR CMAKE_CUDA_STANDARD EQUAL 98
+      OR CMAKE_CUDA_STANDARD LESS 14)
+    set(CMAKE_CUDA_STANDARD 14)
+    set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
   endif ()
+
+  find_package(CUDA REQUIRED) # Enable all the macros
+  find_package(NVML REQUIRED)
+
+  if (Hydrogen_ENABLE_GPU_TENSOR_MATH)
+    set(HYDROGEN_GPU_USE_TENSOR_OP_MATH TRUE)
+  endif ()
+
+  if (Hydrogen_ENABLE_GPU_FP16)
+    set(HYDROGEN_GPU_USE_FP16 TRUE)
+  endif ()
+
+  if (Hydrogen_ENABLE_CUB)
+    find_package(CUB REQUIRED)
+    set(HYDROGEN_HAVE_CUB TRUE)
+  else ()
+    set(HYDROGEN_HAVE_CUB FALSE)
+  endif ()
+
+  if (Hydrogen_ENABLE_NVPROF)
+    find_package(NVTX REQUIRED)
+    set(HYDROGEN_HAVE_NVPROF TRUE)
+  else ()
+    set(HYDROGEN_HAVE_NVPROF FALSE)
+  endif ()
+
+  if (NOT TARGET cuda::toolkit)
+
+    add_library(cuda::toolkit INTERFACE IMPORTED)
+
+    foreach (lib IN LISTS CUDA_CUBLAS_LIBRARIES CUDA_LIBRARIES
+        CUDA_CUDA_LIBRARY CUB_LIBRARIES NVML_LIBRARIES
+        CUDA_cusolver_LIBRARY)
+
+      if (lib)
+        list(APPEND _CUDA_TOOLKIT_LIBS ${lib})
+      endif ()
+
+    endforeach ()
+
+    set_property(TARGET cuda::toolkit PROPERTY
+      INTERFACE_LINK_LIBRARIES "${_CUDA_TOOLKIT_LIBS}")
+
+    set_property(TARGET cuda::toolkit PROPERTY
+      INTERFACE_COMPILE_OPTIONS
+      $<$<COMPILE_LANGUAGE:CUDA>:-arch=sm_60>
+      $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
+
+    set_property(TARGET cuda::toolkit PROPERTY
+      INTERFACE_INCLUDE_DIRECTORIES "${CUDA_INCLUDE_DIRS}")
+  endif ()
+  set(HYDROGEN_HAVE_CUDA TRUE)
 endif (Hydrogen_ENABLE_CUDA)
 
 if (Hydrogen_ENABLE_ROCM)
