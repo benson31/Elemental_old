@@ -4,6 +4,11 @@
 
 namespace El
 {
+bool details::debug_mempool() noexcept
+{
+    char const* const env = std::getenv("H_MEMPOOL_DEBUG");
+    return (env && std::strlen(env) && env[0] != '0');
+}
 
 namespace
 {
