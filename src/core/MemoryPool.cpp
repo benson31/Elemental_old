@@ -10,6 +10,24 @@ bool details::debug_mempool() noexcept
     return (env && std::strlen(env) && env[0] != '0');
 }
 
+float details::default_mempool_bin_growth() noexcept
+{
+    char const* const env = std::getenv("H_MEMPOOL_BIN_GROWTH");
+    return (env ? std::stof(env) : 1.6);
+}
+
+size_t details::default_mempool_min_bin() noexcept
+{
+    char const* const env = std::getenv("H_MEMPOOL_MIN_BIN");
+    return (env ? std::stoull(env) : 1UL);
+}
+
+size_t details::default_mempool_max_bin() noexcept
+{
+    char const* const env = std::getenv("H_MEMPOOL_MAX_BIN");
+    return (env ? std::stoull(env) : (1 << 26));
+}
+
 namespace
 {
 #ifdef HYDROGEN_HAVE_GPU

@@ -32,8 +32,23 @@ void ThrowRuntimeError(Args&&... args)
     throw std::runtime_error(oss.str());
 }
 
-/** Returns true iff env(H_MEMPOOL_DEBUG) is truthy. */
+/** @brief Returns true iff env(H_MEMPOOL_DEBUG) is truthy.
+ *
+ *  Truthy values are non-empty strings that start with any character
+ *  other than '0' (ASCII "zero"). So "true", "false", "1", "13",
+ *  "-q", ":)", and " " are all truthy, while "", "0true", "0false",
+ *  "0000", "0123", and "0:)" are all falsey.
+ */
 bool debug_mempool() noexcept;
+
+/** @brief Check env(H_MEMPOOL_BIN_GROWTH). Default 1.6f. */
+float default_mempool_bin_growth() noexcept;
+
+/** @brief Check env(H_MEMPOOL_MIN_BIN). Default 1UL. */
+size_t default_mempool_min_bin() noexcept;
+
+/** @brief Check env(H_MEMPOOL_MAX_BIN). Default (1<<26). */
+size_t default_mempool_max_bin() noexcept;
 
 } // namespace details
 
@@ -58,10 +73,10 @@ public:
      *  @param max_bin_size Largest bin size (in bytes).
      *  @param debug Print debugging messages.
      */
-    MemoryPool(float bin_growth = 1.6,
-               size_t min_bin_size = 1,
-               size_t max_bin_size = 1<<26,
-               bool debug = details::debug_mempool())
+    MemoryPool(float const bin_growth = details::default_mempool_bin_growth(),
+               size_t const min_bin_size = details::default_mempool_min_bin(),
+               size_t const max_bin_size = details::default_mempool_max_bin(),
+               bool const debug = details::debug_mempool())
         : debug_{debug}
     {
         std::set<size_t> bin_sizes;
