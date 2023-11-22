@@ -721,19 +721,19 @@ include (CMakePackageConfigHelpers)
 # Write the version file for both the build and the install tree
 configure_file(
   "${PROJECT_SOURCE_DIR}/cmake/configure_files/HydrogenConfigVersion.cmake.in"
-  "${CMAKE_BINARY_DIR}/HydrogenConfigVersion.cmake"
+  "${PROJECT_BINARY_DIR}/HydrogenConfigVersion.cmake"
   @ONLY)
 
 # Write the configure file for the build tree
 set(INCLUDE_INSTALL_DIRS "${PROJECT_SOURCE_DIR}/include"
   "${PROJECT_SOURCE_DIR}/include"
   "${PROJECT_SOURCE_DIR}/include/El"
-  "${CMAKE_BINARY_DIR}/include/El")
-set(LIB_INSTALL_DIR "${CMAKE_BINARY_DIR}")
+  "${PROJECT_BINARY_DIR}/include/El")
+set(LIB_INSTALL_DIR "${PROJECT_BINARY_DIR}")
 set(EXTRA_CMAKE_MODULE_DIR "${PROJECT_SOURCE_DIR}/cmake/modules")
 configure_package_config_file(cmake/configure_files/HydrogenConfig.cmake.in
-  "${CMAKE_BINARY_DIR}/HydrogenConfig.cmake"
-  INSTALL_DESTINATION "${CMAKE_BINARY_DIR}"
+  "${PROJECT_BINARY_DIR}/HydrogenConfig.cmake"
+  INSTALL_DESTINATION "${PROJECT_BINARY_DIR}"
   PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
 
 # Build tree export
@@ -746,7 +746,7 @@ set(CMAKE_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/hydrogen)
 set(EXTRA_CMAKE_MODULE_DIR)
 configure_package_config_file(
   cmake/configure_files/HydrogenConfig.cmake.in
-  "${CMAKE_BINARY_DIR}/cmake/HydrogenConfig.cmake"
+  "${PROJECT_BINARY_DIR}/cmake/HydrogenConfig.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_DIR}
   PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
 
@@ -790,7 +790,7 @@ if (NOT __dont_print_summary)
     MPI_CXX_COMPILER
     CMAKE_INSTALL_PREFIX
     PROJECT_SOURCE_DIR
-    CMAKE_BINARY_DIR
+    PROJECT_BINARY_DIR
 
     STRING_VARIABLES
     CMAKE_BUILD_TYPE
