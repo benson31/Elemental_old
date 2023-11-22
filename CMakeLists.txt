@@ -419,7 +419,17 @@ if (Hydrogen_ALUMINUM_AS_SUBMODULE)
       "be found. Check out submodules.")
   endif ()
 
+  # Forward HIP/CUDA settings. The user will still have to specify
+  # whatever subset of `ALUMINUM_ENABLE_{NCCL,HOST_TRANSFER,...}`.
+  set(ALUMINUM_ENABLE_CUDA ${Hydrogen_ENABLE_CUDA}
+    CACHE BOOL "Enable CUDA support in Aluminum.")
+  set(ALUMINUM_ENABLE_ROCM ${Hydrogen_ENABLE_ROCM}
+    CACHE BOOL "Enable ROCm support in Aluminum.")
+
+  # Add the project
   add_subdirectory(submodules/aluminum)
+
+  # Retrieve the relevant bits from the subproject.
   set(Aluminum_LIBRARIES Al)
   set(Aluminum_DIR "${PROJECT_SOURCE_DIR}/submodules/aluminum")
 
@@ -436,6 +446,12 @@ if (Hydrogen_ALUMINUM_AS_SUBMODULE)
     DIRECTORY submodules/aluminum
     DEFINITION AL_HAS_MPI_CUDA)
 
+  # I don't care to support old versions of Aluminum as submodules.
+  if (ALUMINUM_VERSION VERSION_LESS 1.4.0)
+    message(FATAL_ERROR
+      "Bad Aluminum version. "
+      "Checkout a version of Aluminum that reports at least v1.4")
+  endif ()
 else ()
 
   find_package(Aluminum 1.0.0 CONFIG QUIET)
